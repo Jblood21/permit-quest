@@ -95,9 +95,10 @@ function finish(){
   ui.run=null;render();window.scrollTo(0,0)}
 
 /* ---------- views ---------- */
-function header(){const xp=S.xp,i=levelOf(xp),lo=LEVELS[i],hi=LEVELS[i+1]||lo,pct=hi>lo?(xp-lo)/(hi-lo)*100:100;
-  return `<header class="top"><div class="toprow"><button class="logo" data-act="tab" data-v="road" aria-label="Permit Quest home"><i>🚘</i><span>Permit Quest</span></button><div class="chips"><span class="chip" aria-label="${streakNow()} day streak">🔥 ${streakNow()}</span><span class="chip" aria-label="${xp} XP">⭐ ${xp}</span></div></div>
-  <div class="lvl"><small><span>Level ${i+1} · ${RANKS[i]}</span><span>${hi>lo?(hi-xp)+' XP to next':'Max level'}</span></small><div class="bar"><b style="width:${pct}%"></b></div></div></header>`}
+function header(){const xp=S.xp,i=levelOf(xp),lo=LEVELS[i],hi=LEVELS[i+1]||lo,pct=hi>lo?(xp-lo)/(hi-lo):1,A=141.4;
+  const odo=String(xp).padStart(4,'0').split('').map(d=>`<i>${d}</i>`).join('');
+  return `<header class="top"><div class="toprow"><button class="logo" data-act="tab" data-v="road" aria-label="Permit Quest home"><i>🚘</i><span>Permit Quest</span></button><div class="chips"><span class="chip" aria-label="${streakNow()} day streak">🔥 ${streakNow()}</span><span class="odo" role="img" aria-label="${xp} XP">${odo}<small>XP</small></span></div></div>
+  <div class="lvl"><svg class="gauge" viewBox="0 0 80 80" aria-hidden="true"><circle class="gt" cx="40" cy="40" r="30" stroke-dasharray="${A} 188.5"/><circle class="gf" cx="40" cy="40" r="30" stroke-dasharray="${(A*pct).toFixed(1)} 188.5"/><text x="40" y="47" text-anchor="middle">${i+1}</text></svg><div class="lvltxt"><b>${RANKS[i]}</b><span>${hi>lo?(hi-xp)+' XP to level '+(i+2):'Top level reached'}</span></div></div></header>`}
 function tabs(){const t=[['road','🗺️','Road'],['exam','🏁','Exam'],['review','🎯','Review'],['me','🏅','Me']];
   return `<nav class="tabs" aria-label="Main"><div>${t.map(x=>`<button class="tab ${ui.tab===x[0]?'on':''}" data-act="tab" data-v="${x[0]}" aria-current="${ui.tab===x[0]}"><span>${x[1]}</span>${x[2]}</button>`).join('')}</div></nav>`}
 const isIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
