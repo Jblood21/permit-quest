@@ -69,7 +69,7 @@ const startExam=()=>startRun({mode:'exam',title:'Mock Exam',pool:ALL});
 function newItem(){const r=ui.run,q=r.queue[r.i].q;r.opts=shuffle(q.o);r.locked=false;r.sel=null;const p=r.picks[q.id];if(r.mode==='exam'&&p!==undefined)r.sel=r.opts.indexOf(p)}
 function srs(id,ok){const a=(S.q[id]||[0,0,0]).slice();a[0]=ok?Math.min(4,a[0]+1):0;ok?a[1]++:a[2]++;S.q[id]=a}
 function answer(i){
-  const r=ui.run;if(!r||r.locked)return;const item=r.queue[r.i],q=item.q,pick=r.opts[i],ok=pick===q.a;
+  const r=ui.run;if(!r||r.locked)return;const item=r.queue[r.i],q=item.q,chosen=r.opts[i],ok=chosen===q.a;
   if(r.mode==='exam'){r.sel=i;r.picks[q.id]=chosen;render();return}
   r.locked=true;r.sel=i;r.last={ok,gain:0};tick();
   if(!item.retry){srs(q.id,ok);r.first[q.id]=ok;
