@@ -15,7 +15,7 @@ const today=()=>dstr(new Date());
 const yest=()=>{const d=new Date();d.setDate(d.getDate()-1);return dstr(d)};
 
 /* ---------- state ---------- */
-const fresh=()=>({v:1,xp:0,streak:0,best:0,last:'',q:{},stars:{},exams:[],badges:{},daily:'',runs:0,perfect:0,combo:0,hideInstall:false,seenOffline:false});
+const fresh=()=>({v:1,xp:0,streak:0,best:0,last:'',q:{},stars:{},exams:[],badges:{},daily:'',runs:0,perfect:0,combo:0,hideInstall:false,seenOffline:false,coins:0,g:{}});
 let S=fresh();
 try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(v&&typeof v==='object'&&v.q)S=Object.assign(fresh(),v)}catch(e){}
 let saveWarned=false;
@@ -88,18 +88,18 @@ function finish(){
     if(r.chapter){if(stg>stars(r.chapter))S.stars[r.chapter]=stg;xpGain+=stg*10}
     if(r.mode==='daily'&&S.daily!==today()){S.daily=today();xpGain+=30}
     if(correct===total&&total>=5)S.perfect++}
-  S.xp+=xpGain;S.runs++;
+  S.xp+=xpGain;S.runs++;const coins=Math.floor(xpGain/5);S.coins=(S.coins||0)+coins;
   const newB=BADGES.filter(b=>!S.badges[b.id]&&b.t());newB.forEach(b=>S.badges[b.id]=Date.now());save();
   const wrong=ids.filter(k=>!r.first[k]).map(k=>BYID.get(k));
-  ui.result={mode:r.mode,title:r.title,chapter:r.chapter,correct,total,pass,xpGain,stars:stg,best:r.best,wrong,newB,lvUp:levelOf(S.xp)>lvBefore,lv:levelOf(S.xp)};
+  ui.result={coins,mode:r.mode,title:r.title,chapter:r.chapter,correct,total,pass,xpGain,stars:stg,best:r.best,wrong,newB,lvUp:levelOf(S.xp)>lvBefore,lv:levelOf(S.xp)};
   ui.run=null;render();window.scrollTo(0,0)}
 
 /* ---------- views ---------- */
 function header(){const xp=S.xp,i=levelOf(xp),lo=LEVELS[i],hi=LEVELS[i+1]||lo,pct=hi>lo?(xp-lo)/(hi-lo):1,A=141.4;
   const odo=String(xp).padStart(4,'0').split('').map(d=>`<i>${d}</i>`).join('');
   return `<header class="top"><div class="toprow"><button class="logo" data-act="tab" data-v="road" aria-label="Permit Quest home"><i>🚘</i><span>Permit Quest</span></button><div class="chips"><span class="chip" aria-label="${streakNow()} day streak">🔥 ${streakNow()}</span><span class="odo" role="img" aria-label="${xp} XP">${odo}<small>XP</small></span></div></div>
-  <div class="lvl"><svg class="gauge" viewBox="0 0 80 80" aria-hidden="true"><circle class="gt" cx="40" cy="40" r="30" stroke-dasharray="${A} 188.5"/><circle class="gf" cx="40" cy="40" r="30" stroke-dasharray="${(A*pct).toFixed(1)} 188.5"/><text x="40" y="47" text-anchor="middle">${i+1}</text></svg><div class="lvltxt"><b>${RANKS[i]}</b><span>${hi>lo?(hi-xp)+' XP to level '+(i+2):'Top level reached'}</span></div></div></header>`}
-function tabs(){const t=[['road','🗺️','Road'],['exam','🏁','Exam'],['review','🎯','Review'],['me','🏅','Me']];
+  <div class="lvl"><svg class="gauge" viewBox="0 0 80 80" aria-hidden="true"><circle class="gt" cx="40" cy="40" r="30" stroke-dasharray="${A} 188.5"/><circle class="gf" cx="40" cy="40" r="30" stroke-dasharray="${(A*pct).toFixed(1)} 188.5"/><text x="40" y="47" text-anchor="middle">${i+1}</text></svg><div class="lvltxt"><b>${RANKS[i]}</b><span>${hi>lo?(hi-xp)+' XP to level '+(i+2):'Top level reached'}</span></div><span class="coinp" aria-label="${S.coins||0} coins">🪙 ${S.coins||0}</span></div></header>`}
+function tabs(){const t=[['road','🗺️','Road'],['games','🎮','Games'],['exam','🏁','Exam'],['review','🎯','Review'],['me','🏅','Me']];
   return `<nav class="tabs" aria-label="Main"><div>${t.map(x=>`<button class="tab ${ui.tab===x[0]?'on':''}" data-act="tab" data-v="${x[0]}" aria-current="${ui.tab===x[0]}"><span>${x[1]}</span>${x[2]}</button>`).join('')}</div></nav>`}
 const isIOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
@@ -107,7 +107,9 @@ function roadTab(){
   const m=nMastered(),pct=Math.round(m/ALL.length*100),nx=nextStop(),first=S.runs===0,dd=S.daily===today(),last=S.exams[0];
   const ready=pct>=85&&last&&last.s/last.n>=PASS;
   const install=isIOS()&&!standalone()&&!S.hideInstall?`<div class="card hl"><b>Use it offline on your iPhone</b><p class="muted" style="margin:4px 0 10px">Open this page in Safari. Tap Share, then Add to Home Screen. After that it works with no internet.</p><button class="btn small ghost" data-act="hideinstall">Got it</button></div>`:'';
-  return `${install}<div class="card cta">${nx?`<div class="kicker">${first?'Start here':'Up next'}</div><h3>${first?'Your first drive: ':''}${nx.icon} ${esc(nx.name)}</h3><button class="btn primary" data-act="stop" data-v="${nx.id}">${first?'Start driving':'Continue'}</button>`:`<div class="kicker">Road complete</div><h3>All stops at 3 stars</h3><button class="btn primary" data-act="exam">Take the mock exam</button>`}</div>
+  const away=S.last&&S.runs?Math.round((new Date(today()+'T00:00')-new Date(S.last+'T00:00'))/864e5):0;
+  const back=away>=2?`<div class="card hl"><b>Welcome back. You were away ${away} days.</b><p class="muted" style="margin:4px 0 10px">A 5 question Daily Drive keeps your streak going and your answers fresh.</p><button class="btn small ghost" data-act="daily">Start Daily Drive</button></div>`:'';
+  return `${install}${back}<div class="card cta">${nx?`<div class="kicker">${first?'Start here':'Up next'}</div><h3>${first?'Your first drive: ':''}${nx.icon} ${esc(nx.name)}</h3><button class="btn primary" data-act="stop" data-v="${nx.id}">${first?'Start driving':'Continue'}</button>`:`<div class="kicker">Road complete</div><h3>All stops at 3 stars</h3><button class="btn primary" data-act="exam">Take the mock exam</button>`}</div>
   <button class="card daily btn line" style="width:100%;margin:10px 0" data-act="daily"><span class="ic">${dd?'✅':'☀️'}</span><span><b>Daily Drive</b><span class="muted">${dd?'Done today. Back tomorrow.':'5 quick questions · +30 bonus XP'}</span></span></button>
   <div class="card"><div class="ready"><b>Permit readiness</b><strong>${pct}%</strong></div><div class="track"><b style="width:${pct}%"></b></div><div class="muted">${ready?'You are ready to take the real test. Good luck.':m+' of '+ALL.length+' questions mastered. Reach 85% and pass a mock exam to be ready.'}</div></div>
   <h2>The road</h2><div class="road">${CHAPTERS.map((c,i)=>{const lk=!unlocked(i),s=stars(c.id),mm=ALL.filter(q=>q.ch===c.id&&mastered(q.id)).length,n=c.qs.length;
@@ -128,8 +130,8 @@ function meTab(){const m=nMastered(),i=levelOf(S.xp);
   <button class="btn danger small" data-act="reset">Reset all progress</button><div id="codeval" hidden>${code()}</div>`}
 function sheetView(){const c=CH.get(ui.sheet),qs=ALL.filter(q=>q.ch===c.id),mm=qs.filter(q=>mastered(q.id)).length,seen=qs.filter(q=>st(q.id)[1]+st(q.id)[2]>0).length;
   return `<div class="sheetbg" data-act="closesheet"><div class="sheet" role="dialog" aria-label="${esc(c.name)}" data-stop="1"><div class="row" style="align-items:flex-start"><div style="flex:3"><h2>${c.icon} ${esc(c.name)}</h2><div class="stars">${starStr(stars(c.id))}</div></div></div><div class="stat3"><div><b>${qs.length}</b><small>Questions</small></div><div><b>${seen}</b><small>Tried</small></div><div><b>${mm}</b><small>Mastered</small></div></div><button class="btn primary" data-act="stop" data-v="${c.id}">Start ${Math.min(10,qs.length)} questions</button><button class="btn ghost" data-act="notes" data-v="${c.id}">Study notes</button></div></div>`}
-function shell(){const body=ui.tab==='road'?roadTab():ui.tab==='exam'?examTab():ui.tab==='review'?reviewTab():meTab();
-  return header()+`<main>${body}</main>`+tabs()+(ui.sheet?sheetView():'')}
+function shell(){const body=ui.tab==='road'?roadTab():ui.tab==='games'?gamesTab():ui.tab==='exam'?examTab():ui.tab==='review'?reviewTab():meTab();
+  return header()+`<main>${body}</main>`+tabs()+(ui.sheet?sheetView():'')+(ui.gsheet?gsheetView():'')}
 function runView(){const r=ui.run,item=r.queue[r.i],q=item.q,ex=r.mode==='exam';
   const pct=Math.round(r.i/r.queue.length*100)+(r.locked?Math.round(100/r.queue.length):0);
   const opts=r.opts.map((o,i)=>{let cls='';if(ex){if(r.sel===i)cls='sel'}else if(r.locked){if(o===q.a)cls='ok';else if(i===r.sel)cls='bad';else cls='dim'}
@@ -142,7 +144,7 @@ function runView(){const r=ui.run,item=r.queue[r.i],q=item.q,ex=r.mode==='exam';
 function resultView(){const x=ui.result,pct=Math.round(x.correct/x.total*100),ex=x.mode==='exam',nx=nextStop();
   const head=ex?`<div class="big pop" style="color:${x.pass?'var(--green)':'var(--red)'}">${pct}%</div><h2 style="margin-top:10px">${x.pass?'You passed!':'Not yet. Keep practicing.'}</h2><p class="muted">${x.correct} of ${x.total} correct. You need ${Math.round(PASS*100)}% to pass.</p>`
     :`<div class="star3">${x.mode==='stop'?[1,2,3].map(i=>`<span class="${i<=x.stars?'on':''}">★</span>`).join(''):(pct>=90?'🏆':pct>=60?'👍':'💪')}</div><div class="big" style="margin-top:8px">${pct}%</div><h2 style="margin-top:10px">${pct>=90?'Excellent drive':pct>=70?'Good drive':'Keep going'}</h2><p class="muted">${x.correct} of ${x.total} right on the first try.</p>`;
-  const chips=`<div class="gain"><span>+${x.xpGain} XP</span>${x.best>=3?`<span>⚡ Best combo ${x.best}</span>`:''}${x.lvUp?`<span>🎉 Level ${x.lv+1}: ${RANKS[x.lv]}</span>`:''}</div>`;
+  const chips=`<div class="gain"><span>+${x.xpGain} XP</span><span>🪙 ${x.coins}</span>${x.best>=3?`<span>⚡ Best combo ${x.best}</span>`:''}${x.lvUp?`<span>🎉 Level ${x.lv+1}: ${RANKS[x.lv]}</span>`:''}</div>`;
   const nb=x.newB.length?`<div class="card hl center"><b>New badge${x.newB.length>1?'s':''}</b>${x.newB.map(b=>`<div style="margin-top:6px"><span style="font-size:26px">${b.e}</span> <b>${b.n}</b></div>`).join('')}</div>`:'';
   const wr=x.wrong.length?`<div class="card"><h3>${x.wrong.length} to review</h3>${x.wrong.map(q=>`<div class="wrong"><b>${esc(q.q)}</b><br><span>${esc(q.a)}</span><br><small>${esc(q.why)}</small></div>`).join('')}</div>`:'';
   const primary=ex&&!x.pass?`<button class="btn primary" data-act="review">Practice weak spots</button>`:(!ex&&nx&&x.mode!=='review'&&x.mode!=='daily'?`<button class="btn primary" data-act="stop" data-v="${nx.id}">Keep going: ${esc(nx.name)}</button>`:`<button class="btn primary" data-act="home">Back to the road</button>`);
@@ -155,9 +157,9 @@ function render(){const a=$('#app');a.innerHTML=ui.run?runView():ui.result?resul
 
 /* ---------- events ---------- */
 const acts={
-  tab:v=>{ui.tab=v;ui.sheet=null;render();window.scrollTo(0,0)},
+  tab:v=>{ui.tab=v;ui.sheet=null;ui.gsheet=null;render();window.scrollTo(0,0)},
   stop:v=>startStop(v),daily:()=>startDaily(),exam:()=>startExam(),review:()=>startReview(),
-  sheet:v=>{ui.sheet=v;render()},closesheet:()=>{ui.sheet=null;render()},
+  sheet:v=>{ui.sheet=v;render()},closesheet:()=>{ui.sheet=null;ui.gsheet=null;render()},
   locked:v=>{const i=CHAPTERS.findIndex(c=>c.id===v);toast('Earn a star on '+CHAPTERS[i-1].name+' to unlock this stop.')},
   notes:v=>{ui.notes=v;ui.sheet=null;render();window.scrollTo(0,0)},closenotes:()=>{ui.notes=null;render()},
   ans:v=>answer(+v),next:()=>next(),
