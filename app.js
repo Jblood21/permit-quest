@@ -20,7 +20,7 @@ let S=fresh();
 try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(v&&typeof v==='object'&&v.q)S=Object.assign(fresh(),v)}catch(e){}
 let saveWarned=false;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){if(!saveWarned){saveWarned=true;toast('This device would not save your progress. Make a backup code in Me.')}}}
-let ui={tab:'road',sheet:null,notes:null,run:null,result:null,offline:false};
+let ui={lesson:null,tab:'road',sheet:null,notes:null,run:null,result:null,offline:false};
 
 /* ---------- helpers ---------- */
 const st=id=>S.q[id]||[0,0,0];
@@ -60,9 +60,11 @@ const BADGES=[
 function startRun(o){
   const pool=o.pool;if(!pool.length){toast('Nothing to practice here yet.');return}
   const qs=o.mode==='exam'?shuffle(pool).slice(0,EXAM_N):pick(pool,o.n);
-  ui.run={mode:o.mode,title:o.title,chapter:o.chapter||null,queue:qs.map(q=>({q,retry:false})),i:0,first:{},picks:{},combo:0,best:0,xp:0,ok:0,locked:false,sel:null,opts:null};
+  ui.run={missed:[],phase:null,mode:o.mode,title:o.title,chapter:o.chapter||null,queue:qs.map(q=>({q,retry:false})),i:0,first:{},picks:{},combo:0,best:0,xp:0,ok:0,locked:false,sel:null,opts:null};
   ui.sheet=null;ui.result=null;ui.notes=null;newItem();render();window.scrollTo(0,0)}
-const startStop=id=>{const c=CH.get(id);startRun({mode:'stop',title:c.name,chapter:id,pool:ALL.filter(q=>q.ch===id),n:10})};
+const startQuiz=id=>{const c=CH.get(id);ui.lesson=null;startRun({mode:'stop',title:c.name,chapter:id,pool:ALL.filter(q=>q.ch===id),n:10})};
+const startStop=id=>{ui.sheet=null;ui.result=null;ui.lesson={ch:id,i:0};render();window.scrollTo(0,0)};
+const PER=3,lessonPages=id=>{const qs=ALL.filter(q=>q.ch===id),o=[];for(let i=0;i<qs.length;i+=PER)o.push(qs.slice(i,i+PER));return o};
 const startDaily=()=>{if(S.daily===today()){toast('Daily Drive is done. Come back tomorrow.');return}startRun({mode:'daily',title:'Daily Drive',pool:ALL,n:5})};
 const startReview=()=>{const w=ALL.filter(q=>isWeak(q.id));startRun({mode:'review',title:'Fix My Mistakes',pool:w.length?w:ALL,n:10})};
 const startExam=()=>startRun({mode:'exam',title:'Mock Exam',pool:ALL});
@@ -74,10 +76,11 @@ function answer(i){
   r.locked=true;r.sel=i;r.last={ok,gain:0};tick();
   if(!item.retry){srs(q.id,ok);r.first[q.id]=ok;
     if(ok){r.combo++;r.best=Math.max(r.best,r.combo);r.ok++;const g=5+(r.combo>=6?4:r.combo>=3?2:0);r.xp+=g;r.last.gain=g}
-    else{r.combo=0;r.xp+=1;r.last.gain=1;r.queue.push({q,retry:true})}
+    else{r.combo=0;r.xp+=1;r.last.gain=1;if(r.mode==='stop')r.missed.push(q);else r.queue.push({q,retry:true})}
   }else if(ok){r.xp+=2;r.last.gain=2}
+  else if(r.mode==='stop'&&(item.tries||1)<3)r.queue.push({q,retry:true,tries:(item.tries||1)+1})
   S.combo=Math.max(S.combo,r.best);save();render()}
-function next(){const r=ui.run;r.i++;if(r.i>=r.queue.length){finish();return}newItem();render();const b=$('.runbody');if(b)b.scrollTop=0}
+function next(){const r=ui.run;r.i++;if(r.i>=r.queue.length){if(r.mode==='stop'&&r.missed.length){r.phase='review';render();window.scrollTo(0,0);return}finish();return}newItem();render();const b=$('.runbody');if(b)b.scrollTop=0}
 function finish(){
   const r=ui.run,lvBefore=levelOf(S.xp),ids=Object.keys(r.first);let correct,total,pass=null,xpGain,stg=0;
   if(r.mode==='exam'){tick();r.queue.forEach(({q})=>{const ok=r.picks[q.id]===q.a;r.first[q.id]=ok;srs(q.id,ok)});
@@ -91,7 +94,8 @@ function finish(){
   S.xp+=xpGain;S.runs++;const coins=Math.floor(xpGain/5);S.coins=(S.coins||0)+coins;
   const newB=BADGES.filter(b=>!S.badges[b.id]&&b.t());newB.forEach(b=>S.badges[b.id]=Date.now());save();
   const wrong=ids.filter(k=>!r.first[k]).map(k=>BYID.get(k));
-  ui.result={coins,mode:r.mode,title:r.title,chapter:r.chapter,correct,total,pass,xpGain,stars:stg,best:r.best,wrong,newB,lvUp:levelOf(S.xp)>lvBefore,lv:levelOf(S.xp)};
+  let bonus=null;if(r.mode==='stop'&&stg>=1){const i=CHAPTERS.findIndex(c=>c.id===r.chapter),g=GAMES[i%GAMES.length];bonus={id:g.id,name:g.name,icon:g.icon,L:Math.min(10,Math.max(1,Math.ceil((i+1)*10/CHAPTERS.length)))}}
+  ui.result={bonus,coins,mode:r.mode,title:r.title,chapter:r.chapter,correct,total,pass,xpGain,stars:stg,best:r.best,wrong,newB,lvUp:levelOf(S.xp)>lvBefore,lv:levelOf(S.xp)};
   ui.run=null;render();window.scrollTo(0,0)}
 
 /* ---------- views ---------- */
@@ -132,7 +136,9 @@ function sheetView(){const c=CH.get(ui.sheet),qs=ALL.filter(q=>q.ch===c.id),mm=q
   return `<div class="sheetbg" data-act="closesheet"><div class="sheet" role="dialog" aria-label="${esc(c.name)}" data-stop="1"><div class="row" style="align-items:flex-start"><div style="flex:3"><h2>${c.icon} ${esc(c.name)}</h2><div class="stars">${starStr(stars(c.id))}</div></div></div><div class="stat3"><div><b>${qs.length}</b><small>Questions</small></div><div><b>${seen}</b><small>Tried</small></div><div><b>${mm}</b><small>Mastered</small></div></div><button class="btn primary" data-act="stop" data-v="${c.id}">Start ${Math.min(10,qs.length)} questions</button><button class="btn ghost" data-act="notes" data-v="${c.id}">Study notes</button></div></div>`}
 function shell(){const body=ui.tab==='road'?roadTab():ui.tab==='games'?gamesTab():ui.tab==='exam'?examTab():ui.tab==='review'?reviewTab():meTab();
   return header()+`<main>${body}</main>`+tabs()+(ui.sheet?sheetView():'')+(ui.gsheet?gsheetView():'')}
-function runView(){const r=ui.run,item=r.queue[r.i],q=item.q,ex=r.mode==='exam';
+function reviewPhase(){const r=ui.run;
+  return `<div class="run"><div class="runtop"><button class="x" data-act="quit" aria-label="Quit">✕</button><div class="prog"><b style="width:100%"></b></div><div class="combo">🔍</div></div><div class="runbody"><div class="qtag">Review your misses</div><div class="q">${r.missed.length} to look at again</div>${r.missed.map(q=>`<div class="card wrong">${visHTML(q)}<b>${esc(q.q)}</b><br><span>${esc(q.a)}</span><br><small>${esc(q.why)}</small></div>`).join('')}</div><div class="foot"><button class="btn primary" data-act="retrygo">Answer them again</button></div></div>`}
+function runView(){const r=ui.run;if(r.phase==='review')return reviewPhase();const item=r.queue[r.i],q=item.q,ex=r.mode==='exam';
   const pct=Math.round(r.i/r.queue.length*100)+(r.locked?Math.round(100/r.queue.length):0);
   const opts=r.opts.map((o,i)=>{let cls='';if(ex){if(r.sel===i)cls='sel'}else if(r.locked){if(o===q.a)cls='ok';else if(i===r.sel)cls='bad';else cls='dim'}
     return `<button class="opt ${cls}" data-act="ans" data-v="${i}" ${r.locked?'aria-disabled="true"':''}><span class="k">${'ABCD'[i]}</span><span>${esc(o)}</span></button>`}).join('');
@@ -141,19 +147,23 @@ function runView(){const r=ui.run,item=r.queue[r.i],q=item.q,ex=r.mode==='exam';
   else if(r.locked){const ok=r.last.ok;foot=`<div class="fb ${ok?'ok':'bad'}" aria-live="polite"><h3><span>${ok?['Correct','Nice','Yes','Right on'][r.i%4]:'Not quite'}</span><span class="xp">+${r.last.gain} XP</span></h3><p>${ok?'':'The answer is: <b>'+esc(q.a)+'</b>. '}${esc(q.why)}</p><button class="btn primary" data-act="next">${r.i===r.queue.length-1?'See results':'Continue'}</button></div>`}
   return `<div class="run"><div class="runtop"><button class="x" data-act="quit" aria-label="Quit">✕</button><div class="prog"><b style="width:${pct}%"></b></div><div class="combo ${r.combo>=3?'hot':''}">${ex?(r.i+1)+'/'+r.queue.length:'🔥 '+r.combo}</div></div>
   <div class="runbody"><div class="qtag">${esc(ex?'Mock exam':CH.get(q.ch).name)}${item.retry?'<span class="retry">Try again</span>':''}</div>${visHTML(q)}<div class="q">${esc(q.q)}</div>${opts}</div>${foot}</div>`}
+function lessonView(){const L=ui.lesson,c=CH.get(L.ch),pg=lessonPages(L.ch),n=pg.length,last=L.i>=n-1;
+  const facts=pg[L.i].map(q=>`<div class="note">${visHTML(q)}<small>${esc(q.q)}</small><b>${esc(q.a)}</b><span class="muted">${esc(q.why)}</span></div>`).join('');
+  return `<div class="run"><div class="runtop"><button class="x" data-act="lessonquit" aria-label="Close lesson">✕</button><div class="prog"><b style="width:${Math.round((L.i+1)/n*100)}%"></b></div><div class="combo">${L.i+1}/${n}</div></div><div class="runbody"><div class="qtag">Learn: ${c.icon} ${esc(c.name)}</div><div class="card" style="margin-top:10px">${facts}</div></div><div class="foot"><button class="btn primary" data-act="${last?'quizgo':'lessonnext'}">${last?'Start the quiz':'Next'}</button><div class="row" style="justify-content:space-between;margin-top:8px">${L.i>0?'<button class="btn small line" data-act="lessonback">Back</button>':'<span></span>'}${last?'':'<button class="btn small line" data-act="quizgo">Skip to quiz</button>'}</div></div></div>`}
 function resultView(){const x=ui.result,pct=Math.round(x.correct/x.total*100),ex=x.mode==='exam',nx=nextStop();
   const head=ex?`<div class="big pop" style="color:${x.pass?'var(--green)':'var(--red)'}">${pct}%</div><h2 style="margin-top:10px">${x.pass?'You passed!':'Not yet. Keep practicing.'}</h2><p class="muted">${x.correct} of ${x.total} correct. You need ${Math.round(PASS*100)}% to pass.</p>`
     :`<div class="star3">${x.mode==='stop'?[1,2,3].map(i=>`<span class="${i<=x.stars?'on':''}">★</span>`).join(''):(pct>=90?'🏆':pct>=60?'👍':'💪')}</div><div class="big" style="margin-top:8px">${pct}%</div><h2 style="margin-top:10px">${pct>=90?'Excellent drive':pct>=70?'Good drive':'Keep going'}</h2><p class="muted">${x.correct} of ${x.total} right on the first try.</p>`;
   const chips=`<div class="gain"><span>+${x.xpGain} XP</span><span>🪙 ${x.coins}</span>${x.best>=3?`<span>⚡ Best combo ${x.best}</span>`:''}${x.lvUp?`<span>🎉 Level ${x.lv+1}: ${RANKS[x.lv]}</span>`:''}</div>`;
   const nb=x.newB.length?`<div class="card hl center"><b>New badge${x.newB.length>1?'s':''}</b>${x.newB.map(b=>`<div style="margin-top:6px"><span style="font-size:26px">${b.e}</span> <b>${b.n}</b></div>`).join('')}</div>`:'';
-  const wr=x.wrong.length?`<div class="card"><h3>${x.wrong.length} to review</h3>${x.wrong.map(q=>`<div class="wrong"><b>${esc(q.q)}</b><br><span>${esc(q.a)}</span><br><small>${esc(q.why)}</small></div>`).join('')}</div>`:'';
-  const primary=ex&&!x.pass?`<button class="btn primary" data-act="review">Practice weak spots</button>`:(!ex&&nx&&x.mode!=='review'&&x.mode!=='daily'?`<button class="btn primary" data-act="stop" data-v="${nx.id}">Keep going: ${esc(nx.name)}</button>`:`<button class="btn primary" data-act="home">Back to the road</button>`);
-  const sec=primary.includes('data-act="home"')?'':`<button class="btn line" data-act="home" style="margin-top:10px">Back to the road</button>`;
+  const wr=x.wrong.length&&x.mode!=='stop'?`<div class="card"><h3>${x.wrong.length} to review</h3>${x.wrong.map(q=>`<div class="wrong"><b>${esc(q.q)}</b><br><span>${esc(q.a)}</span><br><small>${esc(q.why)}</small></div>`).join('')}</div>`:'';
+  const primary=x.bonus?`<button class="btn primary" data-act="bonus">${x.bonus.icon} Play bonus game: ${esc(x.bonus.name)}</button>`:ex&&!x.pass?`<button class="btn primary" data-act="review">Practice weak spots</button>`:(!ex&&nx&&x.mode!=='review'&&x.mode!=='daily'?`<button class="btn primary" data-act="stop" data-v="${nx.id}">Keep going: ${esc(nx.name)}</button>`:`<button class="btn primary" data-act="home">Back to the road</button>`);
+  const nxBtn=x.bonus&&nx?`<button class="btn line" data-act="stop" data-v="${nx.id}" style="margin-top:10px">Next level: ${esc(nx.name)}</button>`:'';
+  const sec=primary.includes('data-act="home"')?'':nxBtn+`<button class="btn line" data-act="home" style="margin-top:10px">Back to the road</button>`;
   return `<div style="max-width:560px;margin:0 auto;padding:calc(28px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom))"><div class="center"><p class="eyebrow">${esc(x.title)}</p>${head}${chips}</div>${nb}${wr}<div style="margin-top:14px">${primary}${sec}</div></div>`}
 function notesView(){const c=CH.get(ui.notes);
   return `<div class="top"><div class="toprow"><button class="x" data-act="closenotes" aria-label="Back" style="color:#fff">←</button><b style="flex:1">${c.icon} ${esc(c.name)}</b></div></div><main><p class="muted" style="margin-top:0">Key facts for this stop. Read them, then start a run.</p><div class="card">${c.qs.map(q=>`<div class="note">${visHTML(q)}<small>${esc(q.q)}</small><b>${esc(q.a)}</b><span class="muted">${esc(q.why)}</span></div>`).join('')}</div><button class="btn primary" data-act="stop" data-v="${c.id}">Start ${Math.min(10,c.qs.length)} questions</button><p class="muted center">${esc(c.src)}</p></main>`}
-function render(){const a=$('#app');a.innerHTML=ui.run?runView():ui.result?resultView():ui.notes?notesView():shell();
-  if(!ui.run&&!ui.result&&!ui.notes&&ui.tab==='me'){const t=$('#code'),v=$('#codeval');if(t&&v)t.value=v.textContent}}
+function render(){const a=$('#app');a.innerHTML=ui.run?runView():ui.lesson?lessonView():ui.result?resultView():ui.notes?notesView():shell();
+  if(!ui.run&&!ui.lesson&&!ui.result&&!ui.notes&&ui.tab==='me'){const t=$('#code'),v=$('#codeval');if(t&&v)t.value=v.textContent}}
 
 /* ---------- events ---------- */
 const acts={
@@ -163,6 +173,8 @@ const acts={
   locked:v=>{const i=CHAPTERS.findIndex(c=>c.id===v);toast('Earn a star on '+CHAPTERS[i-1].name+' to unlock this stop.')},
   notes:v=>{ui.notes=v;ui.sheet=null;render();window.scrollTo(0,0)},closenotes:()=>{ui.notes=null;render()},
   ans:v=>answer(+v),next:()=>next(),
+  lessonnext:()=>{ui.lesson.i++;render();window.scrollTo(0,0)},lessonback:()=>{ui.lesson.i=Math.max(0,ui.lesson.i-1);render();window.scrollTo(0,0)},lessonquit:()=>{ui.lesson=null;render()},quizgo:()=>startQuiz(ui.lesson.ch),
+  retrygo:()=>{const r=ui.run;r.queue.push(...r.missed.map(q=>({q,retry:true,tries:1})));r.missed=[];r.phase=null;newItem();render();window.scrollTo(0,0)},
   quit:()=>{const r=ui.run;if(r.i>0&&!confirm('Leave this run? Your answers so far are saved, but you will not get stars or the finish bonus.'))return;ui.run=null;render()},
   home:()=>{ui.result=null;ui.tab='road';render();window.scrollTo(0,0)},
   hideinstall:()=>{S.hideInstall=true;save();render()},
@@ -176,7 +188,7 @@ const acts={
 document.addEventListener('click',e=>{
   const bg=e.target.closest('.sheetbg');if(bg&&!e.target.closest('[data-stop]')){acts.closesheet();return}
   const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const f=acts[b.dataset.act];if(f)f(b.dataset.v)});
-document.addEventListener('keydown',e=>{const r=ui.run;if(!r)return;const k={a:0,b:1,c:2,d:3}[e.key.toLowerCase()];if(k!==undefined&&!r.locked)answer(k);else if(e.key==='Enter'&&(r.locked||(r.mode==='exam'&&r.sel!==null)))next()});
+document.addEventListener('keydown',e=>{const r=ui.run;if(!r||r.phase)return;const k={a:0,b:1,c:2,d:3}[e.key.toLowerCase()];if(k!==undefined&&!r.locked)answer(k);else if(e.key==='Enter'&&(r.locked||(r.mode==='exam'&&r.sel!==null)))next()});
 
 /* ---------- offline ---------- */
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){

@@ -292,10 +292,11 @@ function gsheetView(){const g=GAMES.find(x=>x.id===ui.gsheet),st=gStars(g.id);
 acts.gsheet=v=>{ui.gsheet=v;render()};
 acts.glocked=()=>toast('Earn a star on any Road stop to unlock games.');
 acts.glvlock=()=>toast('Beat the level before this one to unlock it.');
-acts.gplay=v=>{const[id,L]=v.split(':');ui.gsheet=null;render();GP.open(id,+L)};
+acts.gplay=v=>{const[id,L]=v.split(':');ui.gsheet=null;render();GP.open(id,+L,false)};
+acts.bonus=()=>{const x=ui.result;if(!x||!x.bonus)return;const b=x.bonus;ui.result=null;ui.tab='road';render();GP.open(b.id,b.L,true)};
 
 const GP={el:null,eng:null,id:null,L:0,raf:0,last:0,run:false,paused:false,cv:null,cx:null,sc:1,timers:[],
- open(id,L){GP.close(true);GP.id=id;GP.L=L;const g=GAMES.find(x=>x.id===id);
+ open(id,L,bonus){GP.close(true);GP.id=id;GP.L=L;GP.bonus=bonus===undefined?GP.bonus:bonus;const g=GAMES.find(x=>x.id===id);
   const el=document.createElement('div');el.className='gov';el.innerHTML=`<div class="gtop"><button class="x" data-g="quit" aria-label="Quit game">✕</button><div class="gtitle"><b>${g.icon} ${g.name}</b><small>Level ${L} of 10</small></div><div class="ghearts" id="gh"></div></div><div class="ghud" id="ghud"></div><div class="gstage" id="gst"><canvas id="gcv"></canvas></div><div class="gctl" id="gctl"></div><div class="gmodal" id="gm"></div>`;
   document.body.appendChild(el);GP.el=el;document.documentElement.classList.add('ingame');
   GP.eng=ENG[id](L,Math.floor(Math.random()*1e6));GP.cv=el.querySelector('#gcv');GP.cx=GP.cv.getContext('2d');
@@ -333,6 +334,6 @@ const GP={el:null,eng:null,id:null,L:0,raf:0,last:0,run:false,paused:false,cv:nu
   if(win){stars=e.kind==='match'?(e.moves/e.mv0>=.35?3:e.moves/e.mv0>=.15?2:1):Math.max(1,e.hearts);coins=5+GP.L+stars*3;
    S.g=S.g||{};const a=S.g[GP.id]=S.g[GP.id]||Array(10).fill(0);a[GP.L-1]=Math.max(a[GP.L-1]||0,stars);S.coins=(S.coins||0)+coins;save()}
   const m=GP.el.querySelector('#gm');m.className='gmodal show';
-  m.innerHTML=win?`<div class="gcardm"><div class="stars3">${[1,2,3].map(i=>`<span class="${i<=stars?'on':''}">★</span>`).join('')}</div><h2>${GP.L===10?'Game mastered':'Level '+GP.L+' clear'}</h2><p class="gain"><span>🪙 +${coins}</span></p>${GP.L<10?'<button class="btn primary" data-g="next">Next level</button>':''}<button class="btn ${GP.L<10?'ghost':'primary'}" data-g="retry" style="margin-top:10px">Play again</button><button class="btn line" data-g="quit" style="margin-top:10px">Back to games</button></div>`
-   :`<div class="gcardm"><div class="bigic">💥</div><h2>${e.kind==='match'?'Out of moves':'Out of hearts'}</h2><p>${e.hud()}. Give it another try, it gets easier.</p><button class="btn primary" data-g="retry">Try again</button><button class="btn line" data-g="quit" style="margin-top:10px">Back to games</button></div>`},
- close(silent){cancelAnimationFrame(GP.raf);GP.run=false;if(GP.el){GP.el.remove();GP.el=null}window.removeEventListener('resize',GP.onResize);document.removeEventListener('visibilitychange',GP.onVis);document.removeEventListener('keydown',GP.onKey);document.documentElement.classList.remove('ingame');GP.eng=null;if(!silent){ui.tab='games';render()}}};
+  m.innerHTML=win?`<div class="gcardm"><div class="stars3">${[1,2,3].map(i=>`<span class="${i<=stars?'on':''}">★</span>`).join('')}</div><h2>${GP.L===10?'Game mastered':'Level '+GP.L+' clear'}</h2><p class="gain"><span>🪙 +${coins}</span></p>${GP.bonus?'<button class="btn primary" data-g="quit">Back to the road</button><button class="btn line" data-g="retry" style="margin-top:10px">Play again</button>':`${GP.L<10?'<button class="btn primary" data-g="next">Next level</button>':''}<button class="btn ${GP.L<10?'ghost':'primary'}" data-g="retry" style="margin-top:10px">Play again</button><button class="btn line" data-g="quit" style="margin-top:10px">Back to games</button>`}</div>`
+   :`<div class="gcardm"><div class="bigic">💥</div><h2>${e.kind==='match'?'Out of moves':'Out of hearts'}</h2><p>${e.hud()}. Give it another try, it gets easier.</p><button class="btn primary" data-g="retry">Try again</button><button class="btn line" data-g="quit" style="margin-top:10px">${GP.bonus?'Back to the road':'Back to games'}</button></div>`},
+ close(silent){cancelAnimationFrame(GP.raf);GP.run=false;if(GP.el){GP.el.remove();GP.el=null}window.removeEventListener('resize',GP.onResize);document.removeEventListener('visibilitychange',GP.onVis);document.removeEventListener('keydown',GP.onKey);document.documentElement.classList.remove('ingame');GP.eng=null;if(!silent){ui.tab=GP.bonus?'road':'games';GP.bonus=false;render()}}};
