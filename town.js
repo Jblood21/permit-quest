@@ -34,7 +34,7 @@ finish=function(){var had=!!S.gotCar;_fin.apply(this,arguments);if(!had&&totalSt
 /* ---------- geometry ---------- */
 function geom(){
  var L=[{k:'home',rx:105,ry:470,bx:100,top:302},{k:'school',rx:285,ry:470,bx:290,top:302}];
- CHAPTERS.forEach(function(c,i){var ev=i%2===0,y=Y0+GAP*i;L.push({k:'ch',i:i,id:c.id,rx:ev?130:260,ry:y+8,bx:ev?300:90,top:y-118})});
+ CHAPTERS.forEach(function(c,i){var ev=i%2===0,y=Y0+GAP*i;L.push({k:'ch',i:i,id:c.id,rx:ev?130:260,ry:y+8,bx:ev?325:65,top:y-118+(i===0?70:0)}) /* buildings sit wide of the road so a car never clips a corner; the first one drops below the school bend */});
  var last=L[L.length-1],fin={k:'fin',rx:195,ry:last.ry+150,bx:195,top:last.ry+60};
  var H=Math.round(fin.ry+110);
  var all=L.concat([fin]),segs=[];
@@ -93,6 +93,9 @@ function lamp(x,y){return '<g transform="translate('+x+' '+y+')"><rect x="-1" y=
 function pond(x,y,s){return '<g transform="translate('+x+' '+y+') scale('+s+')"><ellipse cx="0" cy="0" rx="30" ry="13" fill="#bfe0f5"/><ellipse cx="-6" cy="-2" rx="18" ry="6" fill="#d9eefb"/><ellipse cx="14" cy="3" rx="5" ry="2" fill="#8fd0a5"/></g>'}
 function bench(x,y){return '<g transform="translate('+x+' '+y+')"><rect x="-10" y="-6" width="20" height="3.5" rx="1" fill="#b98a6a"/><rect x="-10" y="-11" width="20" height="3" rx="1" fill="#c99a7a"/><rect x="-8" y="-3" width="2" height="5" fill="#7a5a4a"/><rect x="6" y="-3" width="2" height="5" fill="#7a5a4a"/></g>'}
 
+function mailboxSVG(){
+ var nm=((S.avatar&&S.avatar.name)||S.name||'').trim(),nmU=esc(nm.toUpperCase().slice(0,10)||'HOME'),fs=nm.length>6?6.2:nm.length>4?7.4:9;
+ return '<ellipse cx="14" cy="26" rx="14" ry="3" fill="#3b216822"/><rect x="12.5" y="10" width="3.2" height="16" fill="#8a6a4a"/><rect x="0" y="-2" width="30" height="14" rx="7" fill="#f7b8d6" stroke="#4f2c8a" stroke-width="1.4"/><text x="15" y="8" text-anchor="middle" style="font-family:var(--disp,Arial)" font-weight="900" font-size="'+fs+'" fill="#3b2168">'+nmU+'</text><rect x="26" y="-9" width="2.2" height="9" fill="#4f2c8a"/><path d="M28 -9 h7 v4.5 h-7z" fill="#e5384b"/>'}
 /* ---------- map ---------- */
 function bgSVG(g){
  var H=g.H,o='',r=mul(7);
@@ -131,8 +134,8 @@ function bgSVG(g){
   if(k<.3)o+=tree(x.toFixed(0),y.toFixed(0),s,rr);else if(k<.45)o+=pine(x.toFixed(0),y.toFixed(0),s);else if(k<.6)o+=bush(x.toFixed(0),y.toFixed(0),s);else if(k<.75)o+=flowers(x.toFixed(0),y.toFixed(0),rr);else if(k<.85)o+=cottage(x.toFixed(0),y.toFixed(0),rr);else if(k<.87&&y>900)o+=pond(x.toFixed(0),y.toFixed(0),.9);else if(k<.94)o+=bench(x.toFixed(0),y.toFixed(0));else o+=bush(x.toFixed(0),y.toFixed(0),s)});
  g.segs.forEach(function(s,j){if(j>0&&j%2===0){var p=bez(s.p,.5);o+=lamp(p[0]+(p[0]<195?30:-30),p[1])}});
  /* mailbox with her name */
- var nm=((S.avatar&&S.avatar.name)||S.name||'').trim(),nmU=esc(nm.toUpperCase().slice(0,10)||'HOME'),fs=nm.length>6?6.2:nm.length>4?7.4:9;
- o+='<g transform="translate(160 396)"><ellipse cx="14" cy="26" rx="14" ry="3" fill="#3b216822"/><rect x="12.5" y="10" width="3.2" height="16" fill="#8a6a4a"/><rect x="0" y="-2" width="30" height="14" rx="7" fill="#f7b8d6" stroke="#4f2c8a" stroke-width="1.4"/><text x="15" y="8" text-anchor="middle" style="font-family:var(--disp,Arial)" font-weight="900" font-size="'+fs+'" fill="#3b2168">'+nmU+'</text><rect x="26" y="-9" width="2.2" height="9" fill="#4f2c8a"/><path d="M28 -9 h7 v4.5 h-7z" fill="#e5384b"/></g>';
+ var nm=((S.avatar&&S.avatar.name)||S.name||'').trim();
+ o+='<g transform="translate(160 396)">'+mailboxSVG()+'</g>';
  /* finish arch */
  var f=g.fin;o+='<g transform="translate('+f.rx+' '+(f.ry-8)+')"><rect x="-44" y="-52" width="4" height="52" fill="#6b5a8a"/><rect x="40" y="-52" width="4" height="52" fill="#6b5a8a"/><rect x="-44" y="-62" width="88" height="16" rx="3" fill="#fff" stroke="#4f2c8a" stroke-width="1.6"/><path d="M-40 -62h8v8h-8zM-24 -62h8v8h-8zM-8 -62h8v8h-8zM8 -62h8v8h-8zM24 -62h8v8h-8zM-32 -54h8v8h-8zM-16 -54h8v8h-8zM0 -54h8v8h-8zM16 -54h8v8h-8zM32 -54h8v8h-8z" fill="#2a1a4a"/><text x="0" y="-70" text-anchor="middle" style="font-family:var(--disp,Arial)" font-weight="900" font-size="12" fill="#3b2168">The real test!</text></g>';
  /* title in the sky */
@@ -140,8 +143,17 @@ function bgSVG(g){
  return o}
 
 function starsHTML(n){return [1,2,3].map(function(i){return '<i class="'+(i<=n?'on':'')+'">★</i>'}).join('')}
+/* Built-town cache: the map (SVG background + 21 buildings, ~125 KB of markup) only depends on the key below. While it is unchanged the
+   built node is kept and put back in place of a tiny placeholder, so a tab switch costs no string build and no HTML parse. */
+var TC={key:'',node:null,pend:''};
+function townKey(){var nx=nextStop(),k=[((S.avatar&&S.avatar.name)||S.name||'').trim(),S.gotCar?1:0,S.pos==='school'?1:0,nx?nx.id:'-'];
+ for(var i=0;i<CHAPTERS.length;i++)k.push((unlocked(i)?'u':'l')+stars(CHAPTERS[i].id));return k.join('|')}
+function unph(){var ph=q$('.town-ph');if(!ph)return;var n=TC.node;if(n){ph.replaceWith(n);lastTown=null}}
 function townHTML(){
- G=geom();var g=G,H=g.H,nx=nextStop(),nxi=nx?CHAPTERS.indexOf(nx):-1,out='';
+ G=geom();var key=townKey();
+ if(TC.node&&TC.key===key)return '<div class="town-ph" style="aspect-ratio:'+W+'/'+G.H+'"></div>';
+ TC.pend=key;TC.node=null;
+ var g=G,H=g.H,nx=nextStop(),nxi=nx?CHAPTERS.indexOf(nx):-1,out='';
  var bl=function(l){return 'left:'+(l.bx/W*100).toFixed(3)+'%;top:'+(l.top/H*100).toFixed(3)+'%'};
  var nm=((S.avatar&&S.avatar.name)||S.name||'').trim();
  /* home */
@@ -175,7 +187,7 @@ roadTab=function(){
   +townHTML()}
 
 /* ---------- marker and travel ---------- */
-function scale(){var t=q$('.town');return t?t.clientWidth/W:1}
+function scale(){if(TW.iw===innerWidth&&TW.w)return TW.w/W;var t=q$('.town');if(!t)return 1;TW.iw=innerWidth;TW.w=t.clientWidth;return TW.w/W}
 function bikeSVG(){return '<svg class="twbk" viewBox="0 0 70 40" aria-hidden="true"><g class="whl" style="transform-origin:12px 28px"><circle cx="12" cy="28" r="10" fill="none" stroke="#3b2168" stroke-width="2.4"/><path d="M12 19v18M3 28h18" stroke="#9d8ec2" stroke-width="1"/></g><g class="whl" style="transform-origin:58px 28px"><circle cx="58" cy="28" r="10" fill="none" stroke="#3b2168" stroke-width="2.4"/><path d="M58 19v18M49 28h18" stroke="#9d8ec2" stroke-width="1"/></g><path d="M12 28 L28 28 L36 12 L52 12 M28 28 L40 14 M52 12 L58 28 M36 12 L33 7 h-5 M52 12 l-1 -5 h6" stroke="#ff6fae" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="28" cy="28" r="3" fill="#3b2168"/></svg>'}
 function setMarker(mode){
  var me=q$('.tw-me');if(!me)return null;
@@ -184,11 +196,19 @@ function setMarker(mode){
  if(mode==='car')me.innerHTML='<span class="bob">'+carSVG(av,'twcarsvg')+'</span>';
  else if(mode==='bike')me.innerHTML='<span class="twbikebox">'+avatarSVG(av,'0 0 120 170','twavbk')+bikeSVG()+'</span>';
  else me.innerHTML='<span class="bob">'+avatarSVG(av,null,'twavsvg')+'</span>';
+ me.__sig=mode+'|'+JSON.stringify(av);
  return me}
-function pose(me,x,y){var w=me.offsetWidth,h=me.offsetHeight,s=scale();return 'translate('+(x*s-w/2).toFixed(1)+'px,'+(y*s-h*(me.classList.contains('car')?.62:.88)).toFixed(1)+'px)'}
+/* pose: marker size and town width are read once per (marker art, viewport width) and cached, so placing the marker after a DOM write
+   never forces a layout. The sizes are percentages of the town width and fixed viewBox ratios, so they only change with the width. */
+var DIM={},TW={iw:0,w:0};
+function dims(me){var s=scale(),k=(me.__sig||'')+'|'+TW.w;var d=DIM[k];if(!d){d=DIM[k]=[me.offsetWidth,me.offsetHeight]}return d}
+function pose(me,x,y){var d=dims(me),w=d[0],h=d[1],s=scale();return 'translate('+(x*s-w/2).toFixed(1)+'px,'+(y*s-h*(me.classList.contains('car')?.62:.88)).toFixed(1)+'px)'}
 function place(loc){var me=q$('.tw-me');if(!me||!G)return;var l=G.all[loc];me.style.transform=pose(me,l.rx,l.ry)}
 function idleMode(){return S.gotCar?'car':'walk'}
-function parkNow(){setMarker(idleMode());place(curLoc())}
+function parkNow(){var me=q$('.tw-me');if(!me)return;var mode=idleMode();
+ if(me.__sig===mode+'|'+JSON.stringify(AV_())&&!me.classList.contains('moving')){me.getAnimations&&me.getAnimations().forEach(function(a){a.onfinish=a.oncancel=null;a.cancel()})}else setMarker(mode);
+ place(curLoc())}
+var lastTown=null;
 function focusMarker(instant){var me=q$('.tw-me');if(!me)return;var r=me.getBoundingClientRect();var y=r.top+scrollY+r.height/2-innerHeight*.42;scrollTo({top:Math.max(0,y),behavior:instant||rm()?'auto':'smooth'})}
 window.townFocus=function(){focusMarker(true)};
 function travel(a,b,mode){
@@ -198,8 +218,8 @@ function travel(a,b,mode){
   moving=true;setMarker(mode);me.classList.add('moving');
   var pts=route(a,b),s=scale(),cum=[0],i,tot=0;
   for(i=1;i<pts.length;i++){tot+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);cum.push(tot)}
-  var sp={walk:105,bike:170,car:280}[mode]||150,cap={walk:7000,bike:5200,car:4200}[mode]||5000;
-  var dur=Math.min(cap,Math.max(1300,tot/sp*1000));
+  var sp={walk:105,bike:170,car:280}[mode]||150,cap=2500;
+  var dur=Math.min(cap,Math.max(1200,tot/sp*1000));
   var fr=pts.map(function(p,k){return {transform:pose(me,p[0],p[1]),offset:tot?cum[k]/tot:k/(pts.length-1)}});
   fr[0].offset=0;fr[fr.length-1].offset=1;
   focusMarker(true);
@@ -224,9 +244,11 @@ function closeOv(id){var o=document.getElementById(id);if(o)o.remove()}
 function inTown(){return ui.tab==='road'&&!ui.sheet&&!ui.result&&!ui.notes&&!ui.lesson&&!ui.run&&!ui.ob&&!ui.gsheet}
 
 var pend=null;
-function pickMode(then){
- pend=then;
- overlay('twpick','<div class="twcard" role="dialog" aria-modal="true" aria-label="How are you getting to school?"><h2>Getting to FJH School</h2><p class="muted" style="margin:0 0 14px">You do not have a car yet. How are you getting there today?</p><div class="twmodes"><button class="twmode" data-act="twwalk"><span class="e">🚶</span><b>Walk</b><span class="muted">Slow and steady</span></button><button class="twmode" data-act="twbike"><span class="e">🚲</span><b>Bike</b><span class="muted">Quicker, with a bell</span></button></div><button class="btn line" data-act="twcancel" style="margin-top:12px">Not yet</button></div>',function(){closeOv('twpick');pend=null})}
+function skipIntro(){var x=S.x;return !!(x&&typeof x==='object'&&(x.skipIntros===true||(x.story&&(x.story.seen==='all'||x.story.all))))} /* test seeds only, no UI */
+function pickMode(then,dest){
+ if(skipIntro()){then('walk');return}
+ pend=then;var home=dest==='home',ttl=home?'Heading home':'Getting to FJH School';
+ overlay('twpick','<div class="twcard" role="dialog" aria-modal="true" aria-label="'+ttl+'"><h2>'+ttl+'</h2><p class="muted" style="margin:0 0 14px">You do not have a car yet. How are you getting '+(home?'home':'there today')+'?</p><div class="twmodes"><button class="twmode" data-act="twwalk"><span class="e">🚶</span><b>Walk</b><span class="muted">Slow and steady</span></button><button class="twmode" data-act="twbike"><span class="e">🚲</span><b>Bike</b><span class="muted">Quicker, with a bell</span></button></div><button class="btn line" data-act="twcancel" style="margin-top:12px">Not yet</button></div>',function(){closeOv('twpick');pend=null})}
 
 function arrive(id,start){
  if(!inTown()&&!start)return;
@@ -245,6 +267,15 @@ function go(id,o){
  if(S.pos==='ch'&&S.at===i){arrive(id,o.start);return}
  var from=curLoc();S.pos='ch';S.at=i;save();
  travel(from,to,'car').then(function(){arrive(id,o.start)})}
+function homeSheet(){
+ var n=streakNow();
+ overlay('twhome','<div class="twcard twhomec" role="dialog" aria-modal="true" aria-label="Home sweet home"><div class="twmb" aria-hidden="true"><svg viewBox="-2 -12 40 42">'+mailboxSVG()+'</svg></div><h2>Home sweet home</h2><p class="twstreak">'+(n>0?'<b>🔥 '+n+' day streak</b><span class="muted"> Keep it going with a Daily Drive.</span>':'<span class="muted">No streak yet. A Daily Drive starts one.</span>')+'</p><button class="btn primary" data-act="twhgo">Head to school</button><button class="btn line" data-act="twcancel" style="margin-top:10px">Stay home</button></div>',function(){closeOv('twhome')})}
+function goHome(){
+ if(moving)return;migrate();
+ var from=curLoc();
+ if(from===0){homeSheet();return}
+ var run=function(mode){S.pos='home';save();travel(from,0,mode).then(homeSheet)};
+ if(S.gotCar)run('car');else pickMode(run,'home')}
 function curLoc0(){return S.pos==='school'?1:0}
 window.townGo=go;
 
@@ -266,11 +297,14 @@ function schoolCard(){
 
 Object.assign(acts,{
  twgo:function(v){go(v,{start:false})},
- twhome:function(){toast(((S.avatar&&S.avatar.name)||'Your')+(S.avatar&&S.avatar.name?"'s":'')+' house. Home sweet home.')},
+ twhome:function(){goHome()},
+ twhgo:function(){closeOv('twhome');if(!S.gotCar){acts.twschool();return}
+  if(moving)return;migrate();var from=curLoc();if(from===1){schoolCard();return}
+  S.pos='school';save();travel(from,1,'car').then(function(){schoolCard()})},
  twschool:function(){if(moving)return;if(!S.gotCar){var nx=nextStop();if(nx)go(nx.id,{start:false});return}schoolCard()},
  twwalk:function(){closeOv('twpick');var f=pend;pend=null;f&&f('walk')},
  twbike:function(){closeOv('twpick');var f=pend;pend=null;f&&f('bike')},
- twcancel:function(){closeOv('twpick');closeOv('twsch');pend=null},
+ twcancel:function(){closeOv('twpick');closeOv('twsch');closeOv('twhome');pend=null},
  twdrive:function(){dismissCar();if(ui.drive)autoDrive()},
  twgarage:function(){dismissCar();ui.drive=null;acts.tab('garage')},
  twsdaily:function(){closeOv('twsch');acts.daily()},
@@ -282,15 +316,18 @@ var _tab=acts.tab;
 acts.tab=function(v){_tab(v);if(v==='road')setTimeout(window.townFocus,0)};
 var _home=acts.home;
 acts.home=function(){_home();setTimeout(window.townFocus,0)};
-document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document.getElementById('twcar'))acts.twdrive();else{closeOv('twpick');closeOv('twsch');pend=null}}});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(document.getElementById('twcar'))acts.twdrive();else{closeOv('twpick');closeOv('twsch');closeOv('twhome');pend=null}}});
 
 /* ---------- park (override avatar.js) ---------- */
 parkCar=function(){
- if(!q$('.town'))return;
+ unph();var tw=q$('.town');if(!tw)return;
+ if(!TC.node&&TC.pend&&!q$('.town-ph')){TC.node=tw;TC.key=TC.pend}
  migrate();G=geom();
  if(moving)return;
  parkNow();
- if(S.gotCar&&!S.carSeen){setTimeout(function(){if(inTown()&&!document.getElementById('twcar')&&S.gotCar&&!S.carSeen)carCard()},350);return}
+ if(tw!==lastTown){lastTown=tw;focusMarker(false);setTimeout(function(){if(q$('.town')===tw&&!moving&&!document.getElementById('twcar'))focusMarker(rm())},260)} /* first render of the Town tab (or a fresh one after results): bring the marker into view */
+ if(S.gotCar&&!S.carSeen&&skipIntro()){S.carSeen=true;save()}
+ if(S.gotCar&&!S.carSeen){setTimeout(function(){var ok=function(){return inTown()&&!document.getElementById('twcar')&&S.gotCar&&!S.carSeen};if(!ok())return;if(window.X&&X.modal)X.modal('twcar',carCard,{p:1,ok:ok});else carCard()},350);return}
  if(ui.drive){if(S.gotCar)setTimeout(autoDrive,200);else ui.drive=null}};
 window.addEventListener('resize',function(){if(!moving&&q$('.town'))place(curLoc())});
 migrate();

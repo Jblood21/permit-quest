@@ -1,40 +1,42 @@
 /* Permit Quest FX: synth music + sound effects, 30 pass scenes, 30 fail scenes, snarky feedback words. No audio files, works offline. */
 (function(){
 /* ---------- feedback words ---------- */
-const OKW=['Correct','Nailed it','Smooth','Yes, driver','Easy money','Look at you','Textbook','Boom','Clean','Big brain','Chef\'s kiss','Rude, how good'];
-const BADW=['Not quite','Oof','Close. Not close enough','Yikes','Nope','Swing and a miss','Brakes!','Almost, kinda','Rough one','Bold guess','That was a choice','Respectfully, no'];
-window.fxWord=(ok,i)=>{const p=ok?OKW:BADW;return p[((i||0)*5+(S.runs||0)*3+(ok?1:2))%p.length]};
-const HEAD=[[90,['Suspiciously good driving','Okay, show-off','Parents: shook']],[70,['Good drive. Mostly legal.','Solid. Blinker used.','Clean enough to brag']],[0,['Rough ride. Fixable.','Round two, champ','The handbook missed you']]];
+const OKW=['Correct','Nailed it','Smooth','Yes, driver','Green light','Spot on','Textbook','Boom','Clean','Good call','Right lane','Locked in','Sharp','That\'s the one'];
+const BADW=['Not quite','Oof','Not this time','Close one','Brakes!','Missed it','Detour','Tricky one','Check the why','Next time','Good to learn now','Wrong exit','Pump the brakes','Almost'];
+const SUPW=['Tough one. Read the why, then you\'ve got it.','Tricky stretch. The why below helps.','Stay with it. This one sticks next time.','Two in a row happens. Read the why.'];
+window.fxWord=(ok,i)=>{const p=ok?OKW:(typeof ui!=='undefined'&&ui.run&&ui.run.mm>=2?SUPW:BADW);return p[((i||0)*5+(S.runs||0)*3+(ok?1:2))%p.length]};
+const HEAD=[[90,['Suspiciously good driving','Sharp driving','Cruise control earned']],[70,['Good drive. Nice and legal.','Solid. Blinker used.','Clean enough to brag']],[0,['Rough ride. Fixable.','Round two is yours','Good practice lap']]];
 window.fxHead=pct=>{const g=HEAD.find(h=>pct>=h[0])[1];return g[(S.runs||0)%g.length]};
-const GWIN=['Level clear. Smooth.','Nailed it, no notes','That was clean','Easy. You made it look easy','Whoa. Who taught you that?','Main character moment','Okay, that was lowkey elite','Pit crew would be proud','Fast hands, calm brain','That was basically a victory lap','Coins incoming. You earned them','Studying AND gaming. Multitasker.','Smooth like fresh asphalt','Cheer captain energy, driver edition'];
-const GLOSE=['Ouch. That one stung','Out of lives. Dramatic','Crash and burn, gently','Okay, that was on you','Plot twist: gravity won','So close. Like, almost close','Your thumbs filed a complaint','Respawn and recover, champ','That level had it out for you','Bold strategy. Did not pay off','The game won. Rematch?','Fender bender, no insurance claim','Even pros crash. Try again.','That was a practice lap. Right?'];
+const GWIN=['Level clear. Smooth.','Nailed it, no notes','That was clean','Easy. You made it look easy','Pit crew would be proud','Fast hands, calm brain','That was basically a victory lap','Coins incoming. You earned them','Smooth like fresh asphalt','Cheer captain energy, driver edition','Husky pride. Level clear.','Green flag all the way','Steady hands, clean run','Studying AND gaming. Multitasker.'];
+const GLOSE=['Ouch. That one stung','Crash and burn, gently','Plot twist: gravity won','Your thumbs filed a complaint','That level had it out for you','The game won. Rematch?','Fender bender, no insurance claim','Even pros crash. Try again.','Pit stop. Go again.','Warm-up lap. Go again.','Close call. Reset and go.','Tough level. You can beat it.'];
+let lastLose=-1;
 window.fxGameWin=L=>L===10?'Game mastered. Legend.':GWIN[(L+(S.runs||0))%GWIN.length];
-window.fxGameLose=()=>GLOSE[Math.floor(Math.random()*GLOSE.length)];
+window.fxGameLose=()=>{let k;do{k=Math.floor(Math.random()*GLOSE.length)}while(k===lastLose);lastLose=k;return GLOSE[k]};
 
 /* ---------- scenes: 10 motions x 3 props = 30 each ---------- */
 const PASS=[
- ['zoom',[['🏁','Smooth. Your parents are suspicious.'],['🍕','Zero mailboxes harmed. Pizza earned.'],['🎤','Look at you, obeying signs.']]],
+ ['zoom',[['🏁','Smooth. Parents will be impressed.'],['🍕','Zero mailboxes harmed. Pizza earned.'],['🎤','Every sign obeyed. Nice.']]],
  ['wheelie',[['✨','Technically illegal. Aesthetically correct.'],['🔥','Front wheels up. Speed limit still down.'],['😎','Please only do this on screen.']]],
  ['donut',[['💨','Parking lot energy. Digital parking lot.'],['🌀','Dizzy, but legally correct.'],['🎡','Spin to win. Not on real roads.']]],
- ['hop',[['🎉','Speed bump? Barely noticed.'],['🐸','Bouncy. Suspension: unbothered.'],['⭐','Okay, show-off.']]],
- ['sunset',[['🌅','Riding into the sunset. Blinker on.'],['🌄','Golden hour, golden score.'],['🌇','See you at the DMV, legend.']]],
- ['drift',[['💨','Farmington drift. Fully signaled.'],['🧊','Slides like a cheerleader on ice.'],['😮‍💨','Fast, furious, and 25 in the school zone.']]],
+ ['hop',[['🎉','Speed bump? Barely noticed.'],['🐸','Bouncy. Suspension: unbothered.'],['⭐','Nice hops. Suspension holds.']]],
+ ['sunset',[['🌅','Riding into the sunset. Blinker on.'],['🌄','Golden hour, golden score.'],['🌇','See you at the DMV, driver.']]],
+ ['drift',[['💨','Farmington drift. Fully signaled.'],['🧊','Smooth as fresh ice at the rink.'],['😮‍💨','Fast, furious, and 25 in the school zone.']]],
  ['nitro',[['🔥','Nitro! Still 25 by the school though.'],['🚀','Gone before the quiz even ended.'],['⚡','Turbo unlocked by pure facts.']]],
- ['lap',[['👋','Victory lap. Wave at nobody.'],['🍟','Lap done. Drive-thru is calling.'],['🏆','Winners idle in the parking lot.']]],
- ['launch',[['🎆','Great jump. Not for Main Street.'],['🛹','Skate park, but a car. Bold.'],['🎬','Stunt double sold separately.']]],
- ['highfive',[['🚙','Car high-five. Two mirrors, one brain cell.'],['🚓','Even the cop honked. Respect.'],['🛻','Bestie beep beep!']]]
+ ['lap',[['👋','Victory lap. Wave to the crowd.'],['🍟','Lap done. Drive-thru is calling.'],['🏆','Winners idle in the parking lot.']]],
+ ['launch',[['🎆','Great jump. Not for Main Street.'],['🛹','Skate park, but a car.'],['🎬','Stunt double sold separately.']]],
+ ['highfive',[['🚙','Car high-five. Mirrors in sync.'],['🚓','Even the cop honked. Respect.'],['🛻','Beep beep! Fellow drivers approve.']]]
 ];
 const FAIL=[
- ['bump',[['📬','Mailbox 1, you 0.'],['🚧','That cone had the right of way.'],['🗑️','The trash can was not even moving.']]],
+ ['bump',[['📬','Mailbox says hi. No damage.'],['🚧','That cone had the right of way.'],['🗑️','Trash can: unmoved. Car: fine.']]],
  ['spin',[['🌀','Spinning is not a turn signal.'],['😵‍💫','Wheee... wait. No.'],['🎢','Plot twist: that was not the exit.']]],
- ['flat',[['🛞','Flat tire. Flat score. Fixable.'],['💨','Pssshhh. That was your confidence.'],['🪛','Spare not included in this level.']]],
+ ['flat',[['🛞','Flat tire. Flat score. Fixable.'],['💨','Pssshhh. Slow leak. Easy patch.'],['🪛','Spare not included in this level.']]],
  ['steam',[['☁️','Your engine is crying.'],['🌫️','Hood smoke: the car\'s honest review.'],['🫠','Check engine. Check handbook.']]],
- ['stall',[['🐢','Lurch, lurch. Smooth? Not yet.'],['🐌','Stalling out. Gas, not gaslighting.'],['⏳','Any day now, buddy.']]],
- ['reverse',[['↩️','Backing away from that answer.'],['🔙','Reverse is not a strategy.'],['⏪','Ctrl+Z on that whole attempt.']]],
- ['lift',[['🛸','Abducted. Even aliens want you to study.'],['🎈','Lifted by balloons. Unclear why.'],['🦅','Eagle took your car. Citation pending.']]],
+ ['stall',[['🐢','Lurch, lurch. Smooth? Not yet.'],['🐌','Stalled out. Restart and go.'],['⏳','Engine needs a minute.']]],
+ ['reverse',[['↩️','Backing away from that answer.'],['🔙','Reverse is for parking.'],['⏪','Ctrl+Z on that whole attempt.']]],
+ ['lift',[['🛸','Abducted. Aliens love Utah roads.'],['🎈','Lifted by balloons. Unclear why.'],['🦅','Eagle took your car. Citation pending.']]],
  ['pothole',[['🕳️','Utah roads 1, suspension 0.'],['🪨','A pothole found you personally.'],['🦴','Say hi to the center of the earth.']]],
- ['cone',[['🚧','Orange cone? More like orange ouch.'],['🏐','Cone launched into orbit.'],['🔶','That cone is tired of you.']]],
- ['critter',[['🦌','A deer had right of way. Respect.'],['🐔','Chicken crossed. You braked. Facts.'],['🐿️','Squirrel 1, brakes working.']]]
+ ['cone',[['🚧','Orange cone? More like orange ouch.'],['🏐','Cone launched into orbit.'],['🔶','That cone is fine. Just dizzy.']]],
+ ['critter',[['🦌','A deer had right of way. Respect.'],['🐔','Chicken crossed. You braked. Good call.'],['🐿️','Squirrel 1, brakes working.']]]
 ];
 function pick(good){S.fx=S.fx||{};const k=good?'p':'f';
  if(S.fx[k]==null)S.fx[k]=Math.floor(Math.random()*30);
