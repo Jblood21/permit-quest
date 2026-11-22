@@ -6,8 +6,8 @@ const BADW=['Not quite','Oof','Close. Not close enough','Yikes','Nope','Swing an
 window.fxWord=(ok,i)=>{const p=ok?OKW:BADW;return p[((i||0)*5+(S.runs||0)*3+(ok?1:2))%p.length]};
 const HEAD=[[90,['Suspiciously good driving','Okay, show-off','Parents: shook']],[70,['Good drive. Mostly legal.','Solid. Blinker used.','Clean enough to brag']],[0,['Rough ride. Fixable.','Round two, champ','The handbook missed you']]];
 window.fxHead=pct=>{const g=HEAD.find(h=>pct>=h[0])[1];return g[(S.runs||0)%g.length]};
-const GWIN=['Level clear. Smooth.','Nailed it, no notes','That was clean','Easy. You made it look easy'];
-const GLOSE=['Ouch. That one stung','Out of lives. Dramatic','Crash and burn, gently','Okay, that was on you'];
+const GWIN=['Level clear. Smooth.','Nailed it, no notes','That was clean','Easy. You made it look easy','Whoa. Who taught you that?','Main character moment','Okay, that was lowkey elite','Pit crew would be proud','Fast hands, calm brain','That was basically a victory lap','Coins incoming. You earned them','Studying AND gaming. Multitasker.','Smooth like fresh asphalt','Cheer captain energy, driver edition'];
+const GLOSE=['Ouch. That one stung','Out of lives. Dramatic','Crash and burn, gently','Okay, that was on you','Plot twist: gravity won','So close. Like, almost close','Your thumbs filed a complaint','Respawn and recover, champ','That level had it out for you','Bold strategy. Did not pay off','The game won. Rematch?','Fender bender, no insurance claim','Even pros crash. Try again.','That was a practice lap. Right?'];
 window.fxGameWin=L=>L===10?'Game mastered. Legend.':GWIN[(L+(S.runs||0))%GWIN.length];
 window.fxGameLose=()=>GLOSE[Math.floor(Math.random()*GLOSE.length)];
 
@@ -41,7 +41,10 @@ function pick(good){S.fx=S.fx||{};const k=good?'p':'f';
  const i=S.fx[k]%30;S.fx[k]=(i+1)%30;save();
  const L=good?PASS:FAIL,kind=L[i%10],v=kind[1][Math.floor(i/10)%3];
  return{good,kind:kind[0],prop:v[0],cap:v[1],n:i+1}}
-window.fxStage=(good,holder)=>{let s=holder&&holder.scene;if(!s){s=pick(good);if(holder)holder.scene=s}
+window.fxStage=(good,holder)=>{let s=holder&&holder.scene;if(!s){s=pick(good);
+  if(holder&&holder.mode==='stop'){/* smart touch: failed stop = fender bender, passed stop = car drives off */
+   const L=good?PASS:FAIL,ks=good?[0,6,4,7]:[0,0,0],j=ks[Math.floor(Math.random()*ks.length)],v=L[j][1][Math.floor(Math.random()*3)];s=Object.assign({},s,{kind:L[j][0],prop:v[0],cap:v[1]})}
+  if(holder)holder.scene=s}
  const car=typeof carSVG==='function'?carSVG(AV_(),'fxcar'):'🚘';
  return `<div class="fxs k-${s.kind} ${good?'fxp-ok':'fxp-bad'}" role="img" aria-label="${esc(s.cap)}" data-fx="${good?1:0}"><span class="fxsun"></span><span class="fxp">${s.prop}</span><div class="fxc">${car}</div><span class="fxb">${good?'✨':'💥'}</span><i class="fxroad"></i></div><p class="fxcap">${esc(s.cap)}</p>`};
 
