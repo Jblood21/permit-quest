@@ -71,14 +71,21 @@ function outfitSVG(o,top,skin){
  if(o==='polo')return `<rect x="28" y="134" width="20" height="30" fill="#c9b48a"/><rect x="52" y="134" width="20" height="30" fill="#c9b48a"/><path d="M50 136 V164" stroke="#0003" stroke-width="1.5"/><ellipse cx="38" cy="167" rx="12" ry="5" fill="#6b4f3a"/><ellipse cx="62" cy="167" rx="12" ry="5" fill="#6b4f3a"/>${arm(skin,40)}<rect x="8" y="94" width="14" height="18" rx="7" fill="#7dc4e4"/><rect x="78" y="94" width="14" height="18" rx="7" fill="#7dc4e4"/>${torso('#7dc4e4')}<path d="M38 91 L50 104 L62 91 L58 88 L50 96 L42 88Z" fill="#fff"/><rect x="49" y="100" width="2" height="16" fill="#fff"/>${hands}`;
  if(o==='hoodie')return legsJeans('#3b5b9d')+arm(T,42)+torso(T)+`<path d="M34 92 Q50 112 66 92 Q50 100 34 92Z" fill="#0004"/><rect x="32" y="116" width="36" height="16" rx="7" fill="#0003"/><path d="M44 96 V110 M56 96 V110" stroke="#fff" stroke-width="2"/>${hands}`;
  return legsJeans('#3b5b9d')+arm(skin,42)+`<rect x="8" y="94" width="14" height="18" rx="7" fill="${T}"/><rect x="78" y="94" width="14" height="18" rx="7" fill="${T}"/>`+torso(T)+`<path d="M40 91 Q50 100 60 91" stroke="#0003" stroke-width="2" fill="none"/>`+hands}
-function charBody(av){
- const skin=SKIN[av.skin]||SKIN.s2,hc=HAIRC[av.hairColor]||HAIRC.brown,ec=EYEC[av.eyes]||EYEC.brown,dark=hc==='#1d1a1a'?'#1d1a1a':hc;
- return `${hairBack(av.hairStyle,hc)}${outfitSVG(av.outfit,av.top,skin)}<rect x="43" y="76" width="14" height="16" fill="${skin}"/><circle cx="26" cy="54" r="4.6" fill="${skin}"/><circle cx="74" cy="54" r="4.6" fill="${skin}"/><ellipse cx="50" cy="52" rx="24" ry="27" fill="${skin}"/>
- <circle cx="34" cy="62" r="4.5" fill="#ff6f91" opacity=".28"/><circle cx="66" cy="62" r="4.5" fill="#ff6f91" opacity=".28"/>
+function faceParts(av,skin,hc,ec){
+ const dark=hc;
+ return `<circle cx="25.5" cy="57" r="4.8" fill="${skin}"/><circle cx="74.5" cy="57" r="4.8" fill="${skin}"/><ellipse cx="50" cy="53" rx="25.5" ry="25" fill="${skin}"/>
+ <ellipse cx="30.5" cy="67" rx="6.5" ry="4" fill="#ff7aa2" opacity=".5"/><ellipse cx="69.5" cy="67" rx="6.5" ry="4" fill="#ff7aa2" opacity=".5"/>
  ${hairFront(av.hairStyle,hc)}
- <g><ellipse cx="40" cy="54" rx="4.2" ry="4.7" fill="#fff"/><ellipse cx="60" cy="54" rx="4.2" ry="4.7" fill="#fff"/><circle cx="40" cy="54.5" r="3" fill="${ec}"/><circle cx="60" cy="54.5" r="3" fill="${ec}"/><circle cx="40" cy="54.5" r="1.4" fill="#111"/><circle cx="60" cy="54.5" r="1.4" fill="#111"/><circle cx="41" cy="53" r=".9" fill="#fff"/><circle cx="61" cy="53" r=".9" fill="#fff"/></g>
- <path d="M34 46 Q40 42.5 45.5 45.5 M54.5 45.5 Q60 42.5 66 46" stroke="${dark}" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M50 57 Q48 63 51.5 63" stroke="#0003" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M42 68 Q50 75 58 68" stroke="#a23b4a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+ <g><ellipse cx="38.5" cy="56" rx="6" ry="7" fill="#fff"/><ellipse cx="61.5" cy="56" rx="6" ry="7" fill="#fff"/><ellipse cx="38.5" cy="57" rx="4.9" ry="5.7" fill="${ec}"/><ellipse cx="61.5" cy="57" rx="4.9" ry="5.7" fill="${ec}"/><ellipse cx="38.5" cy="57.4" rx="2.7" ry="3.2" fill="#14161b"/><ellipse cx="61.5" cy="57.4" rx="2.7" ry="3.2" fill="#14161b"/><circle cx="36.6" cy="54.2" r="2.1" fill="#fff"/><circle cx="59.6" cy="54.2" r="2.1" fill="#fff"/><circle cx="40.6" cy="60" r="1" fill="#fff"/><circle cx="63.6" cy="60" r="1" fill="#fff"/></g>
+ <path d="M31.5 50 Q33 47.5 36 47.2 M68.5 50 Q67 47.5 64 47.2" stroke="#14161b" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+ <path d="M34 46.5 Q38.5 44 43 46.5 M57 46.5 Q61.5 44 66 46.5" stroke="${dark}" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".8"/>
+ <circle cx="50" cy="64" r="1.1" fill="#0003"/><path d="M45 69 Q50 77 55 69Z" fill="#b83a5c" stroke="#b83a5c" stroke-width="1.2" stroke-linejoin="round"/><ellipse cx="50" cy="72.6" rx="2.6" ry="1.5" fill="#ff8fa8"/>
  ${glassesSVG(av.glasses)}${hatSVG(av.hat,av.top?TOPC[av.top]:'#2f80ed')}`}
+const HT='translate(0 28) translate(50 52) scale(1.34) translate(-50 -52)',BT='translate(50 172) scale(.74 .68) translate(-50 -172)';
+function charBody(av,mode){
+ const skin=SKIN[av.skin]||SKIN.s2,hc=HAIRC[av.hairColor]||HAIRC.brown,ec=EYEC[av.eyes]||EYEC.brown;
+ if(mode==='head')return `${hairBack(av.hairStyle,hc)}${faceParts(av,skin,hc,ec)}`;
+ return `<g transform="${HT}">${hairBack(av.hairStyle,hc)}</g><g transform="${BT}">${outfitSVG(av.outfit,av.top,skin)}</g><g transform="${HT}">${faceParts(av,skin,hc,ec)}</g>`}
 const avatarSVG=(av,vb,cls)=>`<svg class="${cls||'avsvg'}" viewBox="${vb||'0 0 100 172'}" role="img" aria-label="Your character" xmlns="http://www.w3.org/2000/svg">${charBody(av)}</svg>`;
 let _cp=0;
 function carSVG(av,cls){
@@ -92,14 +99,14 @@ function carSVG(av,cls){
  ${up.includes('spoiler')?`<rect x="30" y="${m.ct+2}" width="5" height="12" fill="#14161b"/><rect x="85" y="${m.ct+2}" width="5" height="12" fill="#14161b"/><rect x="18" y="${m.ct-4}" width="84" height="6" rx="3" fill="#14161b"/>`:''}
  <rect x="3" y="${y0}" width="17" height="${m.wh}" rx="5" fill="#14161b"/><rect x="100" y="${y0}" width="17" height="${m.wh}" rx="5" fill="#14161b"/><rect x="7" y="${y0+4}" width="5" height="${m.wh-8}" rx="2" fill="${rims}"/><rect x="108" y="${y0+4}" width="5" height="${m.wh-8}" rx="2" fill="${rims}"/>
  <path d="M${m.ci} ${m.by+2} L${m.ci+8} ${m.ct} Q60 ${m.ct-6} ${112-m.ci} ${m.ct} L${120-m.ci} ${m.by+2}Z" fill="${col}"/>
- <rect x="10" y="${m.by}" width="100" height="${m.bh}" rx="12" fill="${col}"/>
+ <rect x="10" y="${m.by}" width="100" height="${m.bh}" rx="20" fill="${col}"/><path d="M22 ${m.by+6} Q40 ${m.by+2} 56 ${m.by+4}" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".45"/>
  <path d="M${ws0-6} ${wsB} L${ws0} ${wsT} Q60 ${wsT-5} ${ws1} ${wsT} L${ws1+6} ${wsB}Z" fill="#d6ecff"/>
  <clipPath id="${id}"><path d="M${ws0-6} ${wsB} L${ws0} ${wsT} Q60 ${wsT-5} ${ws1} ${wsT} L${ws1+6} ${wsB}Z"/></clipPath>
- <g clip-path="url(#${id})"><svg x="${ax.toFixed(1)}" y="${ay.toFixed(1)}" width="${aw.toFixed(1)}" height="${ah.toFixed(1)}" viewBox="22 6 56 66">${charBody(Object.assign({},av,{hat:av.hat}))}</svg><path d="M${ws0} ${wsT} L${ws0+22} ${wsT} L${ws0+4} ${wsB}Z" fill="#fff" opacity=".18"/></g>
+ <g clip-path="url(#${id})"><svg x="${ax.toFixed(1)}" y="${ay.toFixed(1)}" width="${aw.toFixed(1)}" height="${ah.toFixed(1)}" viewBox="22 6 56 66">${charBody(Object.assign({},av,{hat:av.hat}),'head')}</svg><path d="M${ws0} ${wsT} L${ws0+22} ${wsT} L${ws0+4} ${wsB}Z" fill="#fff" opacity=".18"/></g>
  <path d="M${ws0-6} ${wsB} L${ws0} ${wsT} Q60 ${wsT-5} ${ws1} ${wsT} L${ws1+6} ${wsB}Z" fill="none" stroke="#0007" stroke-width="2.4"/>
  ${up.includes('stripes')?`<rect x="48" y="${m.by}" width="7" height="${m.bh-6}" fill="#f3f4f6" opacity=".92"/><rect x="65" y="${m.by}" width="7" height="${m.bh-6}" fill="#f3f4f6" opacity=".92"/>`:''}
- <circle cx="24" cy="${m.by+13}" r="6.5" fill="#fff3b0" stroke="#0006" stroke-width="1.5"/><circle cx="96" cy="${m.by+13}" r="6.5" fill="#fff3b0" stroke="#0006" stroke-width="1.5"/>
- <rect x="40" y="${gy-21}" width="40" height="13" rx="3" fill="#14161b"/><path d="M47 ${gy-19} V${gy-10} M54 ${gy-19} V${gy-10} M61 ${gy-19} V${gy-10} M68 ${gy-19} V${gy-10} M75 ${gy-19} V${gy-10}" stroke="#aab2bf" stroke-width="1.3"/>
+ <circle cx="26" cy="${m.by+13}" r="8.5" fill="#fff" stroke="#14161b" stroke-width="2"/><circle cx="94" cy="${m.by+13}" r="8.5" fill="#fff" stroke="#14161b" stroke-width="2"/><circle cx="27.5" cy="${m.by+14.5}" r="4.4" fill="#14161b"/><circle cx="95.5" cy="${m.by+14.5}" r="4.4" fill="#14161b"/><circle cx="25.5" cy="${m.by+11}" r="1.8" fill="#fff"/><circle cx="93.5" cy="${m.by+11}" r="1.8" fill="#fff"/><ellipse cx="16" cy="${m.by+27}" rx="6" ry="3.4" fill="#ff7aa2" opacity=".55"/><ellipse cx="104" cy="${m.by+27}" rx="6" ry="3.4" fill="#ff7aa2" opacity=".55"/>
+ <path d="M48 ${gy-16} Q60 ${gy-4} 72 ${gy-16}" stroke="#14161b" stroke-width="3.4" fill="none" stroke-linecap="round"/>
  <rect x="16" y="${gy-7}" width="88" height="6" rx="3" fill="#14161b" opacity=".4"/></svg>`}
 
 /* ---------- state helpers ---------- */
@@ -114,14 +121,14 @@ function tile(c,it,av){
  const sel=c.multi?(av[c.key]||[]).includes(it.id):av[c.key]===it.id,own=owns(c.key,it.id);
  let pv='';
  if(c.kind==='swatch')pv=`<i class="swatch" style="background:${it.c}"></i>`;
- else if(c.kind==='head')pv=avatarSVG(Object.assign({},av,{[c.key]:it.id}),'12 2 76 84','tpv');
- else if(c.kind==='body')pv=avatarSVG(Object.assign({},av,{[c.key]:it.id,hat:'none'}),'0 0 100 172','tpv tall');
+ else if(c.kind==='head')pv=avatarSVG(Object.assign({},av,{[c.key]:it.id}),'-2 8 104 104','tpv');
+ else if(c.kind==='body')pv=avatarSVG(Object.assign({},av,{[c.key]:it.id,hat:'none'}),'0 8 100 164','tpv tall');
  else{const nv=c.multi?(av[c.key]||[]).includes(it.id)?(av[c.key]||[]).filter(x=>x!==it.id):[...(av[c.key]||[]),it.id]:it.id;pv=carSVG(Object.assign({},av,{[c.key]:c.multi?[it.id]:nv}),'tpv')}
  return `<button class="gt ${sel?'sel':''} ${own?'':'lk'}" data-act="gpick" data-k="${c.key}" data-v="${it.id}" aria-pressed="${sel}" aria-label="${esc(it.n)}${own?'':', '+it.p+' coins'}"><span class="gpv">${pv}</span><b>${esc(it.n)}</b><small>${own?(sel?'Wearing':'Owned'):'🪙 '+it.p}</small></button>`}
 function garageView(onb){
  ui.gx=ui.gx||{c:'hairStyle',t:{}};const av=tryAv(),c=catOf(ui.gx.c),cost=priceOf(av),dirty=Object.keys(ui.gx.t).length>0,coins=S.coins||0;
  const bar=dirty?`<div class="gbar"><div class="muted">${cost?`Costs 🪙 ${cost}${cost>coins?`. You need ${cost-coins} more. Win games to earn them.`:''}`:'Your items'}</div><div class="row" style="gap:8px"><button class="btn small line" data-act="gundo" style="flex:1">Undo</button><button class="btn small primary" data-act="gsave" style="flex:2" ${cost>coins?'disabled style="opacity:.45"':''}>${cost?'Buy and wear':'Wear it'}</button></div></div>`:'';
- return `${onb?'':'<h2>Garage</h2>'}<div class="gprev"><div class="gp1">${avatarSVG(av,'0 0 100 172','avbig')}</div><div class="gp2">${carSVG(av,'carbig')}<span class="gname">${esc(S.avatar&&S.avatar.name||'')}</span></div></div>
+ return `${onb?'':'<h2>Garage</h2>'}<div class="gprev"><div class="gp1">${avatarSVG(av,'0 8 100 164','avbig')}</div><div class="gp2">${carSVG(av,'carbig')}<span class="gname">${esc(S.avatar&&S.avatar.name||'')}</span></div></div>
  <div class="gchips" role="tablist">${CATS.map(x=>`<button role="tab" aria-selected="${x.key===c.key}" class="gc ${x.key===c.key?'on':''}" data-act="gcat" data-v="${x.key}">${x.label}</button>`).join('')}</div>
  <div class="ggrid ${c.kind==='swatch'?'sw':''}">${c.items.map(it=>tile(c,it,av)).join('')}</div>${bar}`}
 const garageTab=()=>garageView(false);
