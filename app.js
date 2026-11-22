@@ -65,7 +65,7 @@ function startRun(o){
   ui.sheet=null;ui.result=null;ui.notes=null;newItem();render();window.scrollTo(0,0)}
 const startQuiz=id=>{const c=CH.get(id);ui.lesson=null;startRun({mode:'stop',title:c.name,chapter:id,pool:ALL.filter(q=>q.ch===id),n:10})};
 const startStop=id=>{ui.sheet=null;ui.result=null;ui.lesson={ch:id,i:0};render();window.scrollTo(0,0)};
-const PER=3,lessonPages=id=>{const qs=ALL.filter(q=>q.ch===id),o=[];for(let i=0;i<qs.length;i+=PER)o.push(qs.slice(i,i+PER));return o};
+const PER=3,LESSON_N=12,lessonPages=id=>{const all=ALL.filter(q=>q.ch===id),top=new Set(all.map(q=>[priority(q),q]).sort((a,b)=>b[0]-a[0]).slice(0,LESSON_N).map(x=>x[1])),qs=all.filter(q=>top.has(q)),o=[];for(let i=0;i<qs.length;i+=PER)o.push(qs.slice(i,i+PER));return o};
 const startDaily=()=>{if(S.daily===today()){toast('Daily Drive is done. Come back tomorrow.');return}startRun({mode:'daily',title:'Daily Drive',pool:ALL,n:5})};
 const startReview=()=>{const w=ALL.filter(q=>isWeak(q.id));startRun({mode:'review',title:'Fix My Mistakes',pool:w.length?w:ALL,n:10})};
 const startExam=()=>startRun({mode:'exam',title:'Mock Exam',pool:ALL});
@@ -151,7 +151,7 @@ function runView(){const r=ui.run;if(r.phase==='review')return reviewPhase();con
   else if(r.locked){const ok=r.last.ok;foot=`<div class="fb ${ok?'ok':'bad'}" aria-live="polite"><h3><span>${fxWord(ok,r.i)}</span><span class="xp">+${r.last.gain} XP</span></h3><p>${ok?'':'The answer is: <b>'+esc(q.a)+'</b>. '}${esc(q.why)}</p><button class="btn primary" data-act="next">${r.i===r.queue.length-1?'See results':'Continue'}</button></div>`}
   return `<div class="run"><div class="runtop"><button class="x" data-act="quit" aria-label="Quit">✕</button><div class="prog"><b style="width:${pct}%"></b></div><div class="combo ${r.combo>=3?'hot':''}">${ex?(r.i+1)+'/'+r.queue.length:'🔥 '+r.combo}</div></div>
   <div class="runbody"><div class="qtag">${esc(ex?(r.mode==='pre'?'Pretest':'Mock exam'):CH.get(q.ch).name)}${item.retry?'<span class="retry">Try again</span>':''}</div>${visHTML(q)}<div class="q">${esc(q.q)}</div>${opts}</div>${foot}</div>`}
-function lessonView(){const L=ui.lesson,c=CH.get(L.ch),pg=lessonPages(L.ch),n=pg.length,last=L.i>=n-1;
+function lessonView(){const L=ui.lesson,c=CH.get(L.ch),pg=L.pg||(L.pg=lessonPages(L.ch)),n=pg.length,last=L.i>=n-1;
   const facts=pg[L.i].map(q=>`<div class="note">${visHTML(q)}<small>${esc(q.q)}</small><b>${esc(q.a)}</b><span class="muted">${esc(q.why)}</span></div>`).join('');
   return `<div class="run"><div class="runtop"><button class="x" data-act="lessonquit" aria-label="Close lesson">✕</button><div class="prog"><b style="width:${Math.round((L.i+1)/n*100)}%"></b></div><div class="combo">${L.i+1}/${n}</div></div><div class="runbody"><div class="qtag">Learn: ${c.icon} ${esc(c.name)}</div><div class="card" style="margin-top:10px">${facts}</div></div><div class="foot"><button class="btn primary" data-act="${last?'quizgo':'lessonnext'}">${last?'Start the quiz':'Next'}</button><div class="row" style="justify-content:space-between;margin-top:8px">${L.i>0?'<button class="btn small line" data-act="lessonback">Back</button>':'<span></span>'}${last?'':'<button class="btn small line" data-act="quizgo">Skip to quiz</button>'}</div></div></div>`}
 function resultView(){if(ui.result.mode==='pre'&&typeof preResult==='function')return preResult(ui.result);const x=ui.result,pct=Math.round(x.correct/x.total*100),ex=x.mode==='exam',nx=nextStop(),good=ex?x.pass:(x.mode==='stop'?x.stars>=1:pct>=70),scn=typeof fxStage==='function'?fxStage(good,x):'';
