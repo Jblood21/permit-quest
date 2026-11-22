@@ -2,7 +2,7 @@
    Atomic versioned precache: all assets or nothing. Cache-first from this version's cache only, no revalidation,
    so a page can never see files from two builds. A new version waits until the user taps "Update ready"
    (SKIP_WAITING message) or the app is closed and reopened. */
-const V='pq-e5e7263b';
+const V='pq-75183218';
 const ASSETS=["./","index.html","style.css","questions.js","signs.js","app.js","games.js","avatar.js","cars.js","town.js","fx.js","fx3d.js","x.js","manifest.webmanifest","apple-touch-icon.png","icon-192.png","icon-512.png","icon-maskable-512.png"];
 self.addEventListener('install',e=>e.waitUntil((async()=>{
   await caches.delete(V);                       // drop any half-built cache from an earlier failed attempt

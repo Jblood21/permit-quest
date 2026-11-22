@@ -31,4 +31,36 @@ dashyellow:road([0,1,2,3].map(i=>`<rect x="78" y="${6+i*25}" width="5" height="1
 whitedash:road('<rect x="10" y="0" width="4" height="100" fill="#fff"/><rect x="146" y="0" width="4" height="100" fill="#fff"/>'+[0,1,2,3].map(i=>`<rect x="78" y="${6+i*25}" width="4" height="14" fill="#fff"/>`).join('')),
 dblwhite:road('<rect x="76" y="0" width="4" height="100" fill="#fff"/><rect x="85" y="0" width="4" height="100" fill="#fff"/><path d="M40 50l14 -16 14 16 -14 16z" fill="none" stroke="#fff" stroke-width="4"/>')
 };
+/* Accessible names. Each says what is DRAWN (shape, color, words, symbol), never what it means or what to do.
+   The picture is the question, so no label may state the answer. Words printed on a sign are read out, as a sighted student would read them. */
+const ALT={
+stop:'Red eight-sided sign with a white border and white capital letters reading STOP',
+yield:'Downward-pointing triangle sign with a wide red border and a white center, with red capital letters reading YIELD',
+speed25:'White upright rectangle sign with a black border. Black words SPEED LIMIT above a large black number 25',
+rr:'Round yellow sign with a black X and a black letter R on each side of the X',
+crossbuck:'White X-shaped sign on a gray post, with black capital letters reading RAILROAD across the arms',
+school:'Yellow-green sign with five sides, shaped like a house front, showing two black child figures',
+dne:'Square white sign with a black edge. A red circle holds a wide white horizontal bar',
+wrongway:'Red rectangle sign with a white border and white capital letters on two lines reading WRONG WAY',
+oneway:'Black rectangle sign with a white border and a long white arrow pointing right',
+nouturn:'Square white sign with a black U-shaped arrow turning back on itself, inside a red circle with a red diagonal slash',
+roadwork:'Orange diamond sign with a black border and three lines of black capital letters reading ROAD WORK AHEAD',
+ped:'Yellow diamond sign with a black border and one black walking person',
+hospital:'Square blue sign with a white border and a large white letter H',
+shield:'Shield-shaped sign, blue with a red band across the top, white capital letters reading INTERSTATE at the top and a large white number 15 below',
+red:'Traffic light with three lamps in a column. The top lamp glows red, the other two are dark',
+yellow:'Traffic light with three lamps in a column. The middle lamp glows yellow, the other two are dark',
+flashyellow:'Traffic light with three lamps in a column. The middle lamp glows yellow and blinks, with the word FLASHING below',
+flashred:'Traffic light with three lamps in a column. The top lamp glows red and blinks, with the word FLASHING below',
+greenarrow:'Traffic light with three lamps in a column. The bottom lamp shows a green arrow pointing left, the other two are dark',
+redarrow:'Traffic light with three lamps in a column. The top lamp shows a red arrow pointing left, the other two are dark',
+flashyellowarrow:'Traffic light with three lamps in a column. The middle lamp shows a yellow arrow pointing left and blinks, with the word FLASHING below',
+dblyellow:'Gray road seen from above. Two solid yellow lines run side by side down the middle',
+dashyellow:'Gray road seen from above. One broken yellow line, a row of short dashes, runs down the middle',
+whitedash:'Gray road seen from above. A solid white line on each edge and a broken white line of dashes down the middle',
+dblwhite:'Gray road seen from above. Two solid white lines run side by side down the middle, with a white diamond outline just left of them'
+};
+for(const k in V){if(!ALT[k])throw new Error('signs: no alt text for '+k);
+  V[k]=V[k].replace('role="img" aria-hidden="true"','role="img" aria-label="'+ALT[k].replace(/"/g,'&quot;')+'"')}
+window.VIS_ALT=ALT;
 return V})();

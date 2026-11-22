@@ -2,15 +2,17 @@
 (function(){
 /* ---------- feedback words ---------- */
 const OKW=['Correct','Nailed it','Smooth','Yes, driver','Green light','Spot on','Textbook','Boom','Clean','Good call','Right lane','Locked in','Sharp','That\'s the one'];
-const BADW=['Not quite','Oof','Not this time','Close one','Brakes!','Missed it','Detour','Tricky one','Check the why','Next time','Good to learn now','Wrong exit','Pump the brakes','Almost'];
-const SUPW=['Tough one. Read the why, then you\'ve got it.','Tricky stretch. The why below helps.','Stay with it. This one sticks next time.','Two in a row happens. Read the why.'];
+const BADW=['Not quite','Almost there','Not this time','Close one','Brakes!','Missed it','Detour','Tricky one','Check the why','Next time','Good to learn now','Wrong exit','Pump the brakes','Almost'];
+const SUPW=['Tough one. Read the why, then you\'ve got it.','Tricky stretch. The why below helps.','Stay with it. This one sticks next time.'];
 window.fxWord=(ok,i)=>{const p=ok?OKW:(typeof ui!=='undefined'&&ui.run&&ui.run.mm>=2?SUPW:BADW);return p[((i||0)*5+(S.runs||0)*3+(ok?1:2))%p.length]};
-const HEAD=[[90,['Suspiciously good driving','Sharp driving','Cruise control earned']],[70,['Good drive. Nice and legal.','Solid. Blinker used.','Clean enough to brag']],[0,['Rough ride. Fixable.','Round two is yours','Good practice lap']]];
+const HEAD=[[90,['Suspiciously good driving','Sharp driving','Cruise control earned']],[80,['Strong round. Nice and legal.','Solid. Blinker used.','Clean enough to brag']],[60,['Good practice lap','Steady progress. Keep it up.','Getting smoother every round']],[40,['Halfway there. Keep rolling.','A decent warm-up lap','Building speed. Go again.']],[0,['This one is tricky. Let\'s go over it.','Fresh start. You can do this.','Not a star yet. A quick read of the notes helps.']]];
 window.fxHead=pct=>{const g=HEAD.find(h=>pct>=h[0])[1];return g[(S.runs||0)%g.length]};
+window.fxIcon=pct=>pct>=90?'🏆':pct>=80?'🌟':pct>=60?'👍':pct>=40?'💪':'🌱';
 const GWIN=['Level clear. Smooth.','Nailed it, no notes','That was clean','Easy. You made it look easy','Pit crew would be proud','Fast hands, calm brain','That was basically a victory lap','Coins incoming. You earned them','Smooth like fresh asphalt','Cheer captain energy, driver edition','Husky pride. Level clear.','Green flag all the way','Steady hands, clean run','Studying AND gaming. Multitasker.'];
-const GLOSE=['Ouch. That one stung','Crash and burn, gently','Plot twist: gravity won','Your thumbs filed a complaint','That level had it out for you','The game won. Rematch?','Fender bender, no insurance claim','Even pros crash. Try again.','Pit stop. Go again.','Warm-up lap. Go again.','Close call. Reset and go.','Tough level. You can beat it.'];
+const GLOSE=['Close one. Go again.','That one got away. Try again.','Plot twist: gravity won this round.','Even pros restart. Try again.','Pit stop. Go again.','Warm-up lap done. Go again.','Close call. Reset and go.','Tough level. You can beat it.','Round over. Ready for another?','Small bump. Back on the road.'];
 let lastLose=-1;
-window.fxGameWin=L=>L===10?'Game mastered. Legend.':GWIN[(L+(S.runs||0))%GWIN.length];
+const GW3=['Perfect run. Three stars.','Flawless. Smooth like fresh asphalt.','Three stars. Cheer captain energy, driver edition.','Husky pride. Perfect run.'],GW2=['Clean win. One more clean run for 3 stars.','Level clear. Two stars in the bank.','Steady hands, good run. 3 stars is close.','Green flag. Go for the third star next.'],GW1=['Level clear. Every win counts.','You made it through. Go again for more stars.','Level clear. Coins earned.','Made it. Smoother next time, if you want more stars.'];
+window.fxGameWin=(L,stars)=>{const k=(L+(S.runs||0))%4;if(stars===3)return L===10?'Game mastered. Legend.':GW3[k];if(stars===2)return GW2[k];if(stars===1)return L===10?'Level 10 cleared. Come back for more stars.':GW1[k];return L===10?'Game mastered. Legend.':GWIN[(L+(S.runs||0))%GWIN.length]};
 window.fxGameLose=()=>{let k;do{k=Math.floor(Math.random()*GLOSE.length)}while(k===lastLose);lastLose=k;return GLOSE[k]};
 
 /* ---------- scenes: 10 motions x 3 props = 30 each ---------- */
@@ -27,17 +29,18 @@ const PASS=[
  ['highfive',[['🚙','Car high-five. Mirrors in sync.'],['🚓','Even the cop honked. Respect.'],['🛻','Beep beep! Fellow drivers approve.']]]
 ];
 const FAIL=[
- ['bump',[['📬','Mailbox says hi. No damage.'],['🚧','That cone had the right of way.'],['🗑️','Trash can: unmoved. Car: fine.']]],
- ['spin',[['🌀','Spinning is not a turn signal.'],['😵‍💫','Wheee... wait. No.'],['🎢','Plot twist: that was not the exit.']]],
- ['flat',[['🛞','Flat tire. Flat score. Fixable.'],['💨','Pssshhh. Slow leak. Easy patch.'],['🪛','Spare not included in this level.']]],
- ['steam',[['☁️','Your engine is crying.'],['🌫️','Hood smoke: the car\'s honest review.'],['🫠','Check engine. Check handbook.']]],
- ['stall',[['🐢','Lurch, lurch. Smooth? Not yet.'],['🐌','Stalled out. Restart and go.'],['⏳','Engine needs a minute.']]],
- ['reverse',[['↩️','Backing away from that answer.'],['🔙','Reverse is for parking.'],['⏪','Ctrl+Z on that whole attempt.']]],
- ['lift',[['🛸','Abducted. Aliens love Utah roads.'],['🎈','Lifted by balloons. Unclear why.'],['🦅','Eagle took your car. Citation pending.']]],
- ['pothole',[['🕳️','Utah roads 1, suspension 0.'],['🪨','A pothole found you personally.'],['🦴','Say hi to the center of the earth.']]],
- ['cone',[['🚧','Orange cone? More like orange ouch.'],['🏐','Cone launched into orbit.'],['🔶','That cone is fine. Just dizzy.']]],
+ ['bump',[['📬','Mailbox says hi. No damage.'],['🚧','Cone says hi. No harm done.'],['🗑️','Trash can: unmoved. Car: fine.']]],
+ ['spin',[['🌀','Spun out. Easy to fix.'],['😵‍💫','Whoops. Reset and go.'],['🎢','Wrong exit. The next one is right.']]],
+ ['flat',[['🛞','Flat tire. Pulled over safely.'],['💨','Pssshhh. Slow leak. Easy patch.'],['🪛','Spare tire coming up.']]],
+ ['steam',[['☁️','Engine is warming up.'],['🌫️','Pit stop. Hood up, back soon.'],['🫠','Check engine. Peek at the notes.']]],
+ ['stall',[['🐢','Slow and steady. Smooth comes next.'],['🐌','Stalled out. Restart and go.'],['⏳','Engine needs a minute.']]],
+ ['reverse',[['↩️','Detour ahead. Backing up a bit.'],['🔙','Reverse is for parking.'],['⏪','Fresh start, same car.']]],
+ ['lift',[['🛸','Abducted. Aliens love Utah roads.'],['🎈','Lifted by balloons. Unclear why.'],['🦅','Eagle borrowed your car. It is back now.']]],
+ ['pothole',[['🕳️','Utah roads 1, suspension 0.'],['🪨','Pothole on the route. Detour time.'],['🦴','Say hi to the center of the earth.']]],
+ ['cone',[['🚧','Orange cone, still standing.'],['🏐','Cone launched into orbit.'],['🔶','That cone is fine. Just dizzy.']]],
  ['critter',[['🦌','A deer had right of way. Respect.'],['🐔','Chicken crossed. You braked. Good call.'],['🐿️','Squirrel 1, brakes working.']]]
 ];
+window.fxPools={PASS:PASS,FAIL:FAIL};
 function pick(good){S.fx=S.fx||{};const k=good?'p':'f';
  if(S.fx[k]==null)S.fx[k]=Math.floor(Math.random()*30);
  const i=S.fx[k]%30;S.fx[k]=(i+1)%30;save();
@@ -88,8 +91,9 @@ function sched(){if(!AC||!mOn()||document.hidden)return;const bpm=track==='game'
 function startMusic(){if(!mOn()||!ctx())return;if(AC.state==='suspended')AC.resume();if(!timer){nextT=0;timer=setInterval(sched,40)}}
 function stopMusic(){clearInterval(timer);timer=0}
 window.fxTrack=n=>{track=n;step=0;nextT=0};
-window.sndBtn=()=>{const m=mode();return `<button class="chip snd" data-act="snd" aria-label="Sound: ${['music and effects on','effects only','sound off'][m]}. Tap to change">${['🎵','🔔','🔇'][m]}</button>`};
-const cycle=()=>{S.snd=(mode()+1)%3;save();if(mOn())startMusic();else stopMusic();sfx('tick')};
+const sndLbl=()=>mode()===2?'Sound off, tap to unmute':mode()===1?'Sound effects on, tap to mute':'Sound on, tap to mute';
+window.sndBtn=()=>{const m=mode();return `<button class="chip snd" data-act="snd" aria-label="${sndLbl()}" aria-pressed="${m<2}">${['🎵','🔔','🔇'][m]}</button>`};
+const cycle=()=>{S.snd=mode()<2?2:0;save();if(mOn())startMusic();else stopMusic();sfx('tick')};
 acts.snd=()=>{cycle();render()};
 function gate(){if(mOn())startMusic()}
 ['pointerdown','keydown','touchend'].forEach(e=>document.addEventListener(e,gate,{passive:true}));
@@ -99,7 +103,7 @@ document.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closes
 
 /* ---------- scene stingers ---------- */
 function stinger(root){const q=(root||document).querySelectorAll('.fxs:not(.said)');q.forEach(el=>{el.classList.add('said');const g=el.dataset.fx==='1',k=(el.className.match(/k-(\w+)/)||[])[1];
- if(g){sfx('win');setTimeout(()=>sfx('horn'),500)}else{setTimeout(()=>{sfx(k==='critter'||k==='reverse'?'skid':'crash')},k==='lift'||k==='steam'||k==='stall'?100:700);setTimeout(()=>sfx('lose'),900)}})}
+ if(g){sfx('win');setTimeout(()=>sfx('horn'),500)}else if(el.classList.contains('fxsoft')){setTimeout(()=>sfx('bad'),600)}else{setTimeout(()=>{sfx(k==='critter'||k==='reverse'?'skid':'crash')},k==='lift'||k==='steam'||k==='stall'?100:700);setTimeout(()=>sfx('lose'),900)}})}
 const _r=window.render;window.render=function(){_r();const o=document.getElementById('rsm');if(o)o.remove();
  if(ui.rs){const d=document.createElement('div');d.id='rsm';d.className='sheetbg rsbg';d.innerHTML=ui.rs===1?
  `<div class="sheet rs" role="alertdialog" aria-label="Reset all progress" data-stop="1"><h2>Reset everything?</h2><p class="muted">This puts the app back to a brand new start on this phone.</p><button class="btn primary" data-act="rscancel">Keep my progress</button><button class="btn line" data-act="rs2" style="margin-top:10px">Continue to reset</button></div>`:
@@ -109,7 +113,7 @@ const _r=window.render;window.render=function(){_r();const o=document.getElement
 const _a=window.answer;window.answer=function(i){_a.apply(this,arguments);const r=ui.run;if(r&&r.last&&r.locked!==false&&!isT(r.mode)){sfx(r.last.ok?'ok':'bad')}};
 /* game hooks */
 const _o=GP.open,_c=GP.close,_e=GP.end,_h=GP.hud;let lastH=null;
-GP.open=function(){fxTrack('game');lastH=null;const r=_o.apply(this,arguments);try{const t=GP.el.querySelector('.gtop');const b=document.createElement('button');b.className='x';b.id='gsnd';b.style.color='#fff';b.textContent=['🎵','🔔','🔇'][mode()];b.setAttribute('aria-label','Change sound');b.onclick=()=>{cycle();b.textContent=['🎵','🔔','🔇'][mode()]};t.appendChild(b)}catch(e){}return r};
+GP.open=function(){fxTrack('game');lastH=null;const r=_o.apply(this,arguments);try{const t=GP.el.querySelector('.gtop');const b=document.createElement('button');b.className='x';b.id='gsnd';b.style.color='#fff';b.textContent=['🎵','🔔','🔇'][mode()];b.setAttribute('aria-label',sndLbl());b.onclick=()=>{cycle();b.textContent=['🎵','🔔','🔇'][mode()];b.setAttribute('aria-label',sndLbl())};t.appendChild(b)}catch(e){}return r};
 GP.close=function(){fxTrack('road');return _c.apply(this,arguments)};
 GP.hud=function(){const e=GP.eng;if(e&&typeof e.hearts==='number'){if(lastH!==null&&e.hearts<lastH)sfx('hit');lastH=e.hearts}return _h.apply(this,arguments)};
 GP.end=function(){_e.apply(this,arguments);if(GP.el)stinger(GP.el)};

@@ -29,7 +29,7 @@ const LV={
 };
 const GAMES=[
  {id:'flappy',name:'Flappy Car',icon:'🚗',tag:'Tap to hop through the gaps',how:L=>'Tap to hop your car. Get through '+LV.flappy.goal[L-1]+' barriers. You have 3 hearts.'},
- {id:'dash',name:'Crosswalk Dash',icon:'🚸',tag:'Cross the road, dodge traffic',how:L=>'Swipe or use the arrows to cross '+(LV.dash.lanes[L-1]+(L>=8?1:0))+' lanes'+(L>=8?'. Never cross when the train lights flash.':'.')+' 3 hearts.'},
+ {id:'dash',name:'Crosswalk Dash',icon:'🚸',tag:'Cross the road, dodge traffic',how:L=>'Swipe or use the arrows to cross '+(LV.dash.lanes[L-1]+(L>=8?1:0))+' lanes and reach the far sidewalk. The counter shows '+(LV.dash.lanes[L-1]+(L>=8?1:0)+1)+' steps.'+(L>=8?' Never cross when the train lights flash.':'')+' 3 hearts.'},
  {id:'stack',name:'Highway Stack',icon:'🧱',tag:'Stack cars, clear traffic',how:L=>'Fit the falling cars together. Clear '+LV.stack.goal[L-1]+' rows.'+(LV.stack.junk[L-1]?' Some rows start full.':'')+' 3 hearts.'},
  {id:'match',name:'Sign Match',icon:'🛑',tag:'Match road signs',how:L=>ENG.matchHow(L)},
  {id:'bubble',name:'Pop the Traffic',icon:'🫧',tag:'Aim, shoot, match 3',how:L=>'Drag to aim, let go to shoot. Match 3 or more to pop. Clear the board. 3 hearts.'}
@@ -187,7 +187,7 @@ ENG.dash=function(L,seed){
  const items=[];for(const r of pick){if(rng()<.55)items.push({row:r,col:Math.floor(rng()*cols),k:'coin',got:0})}
  if(L>=3){const r=pick[Math.floor(rng()*pick.length)],cc=Math.floor(rng()*cols);if(!items.some(q=>q.row===r&&q.col===cc))items.push({row:r,col:cc,k:'heart',got:0})}
  const s={kind:'dash',L,W:GW,H:GH,hearts:3,status:'play',t:0,inv:0,col:3,row:0,hop:0,vx:3,vr:0,got:0,controls:[['◀','left'],['▲','up'],['▼','down'],['▶','right']],cell,rows,oy,fx,lane,
-  hud(){return 'Lanes crossed '+Math.max(0,s.row-0)+' of '+(rows-1)},
+  hud(){const T=rows-2;return 'Lanes crossed '+Math.max(0,Math.min(T,s.row-1))+' of '+T},
   dist(ln,t){const b=ln.burst;if(!b)return ln.speed*t;const k=6.2832/b.T;return ln.speed*(t*(1+b.b*.5)-b.b*(Math.sin(k*t+2*b.ph)-Math.sin(2*b.ph))/(2*k))},
   spd(ln,t){const b=ln.burst;return b?ln.speed*(1+b.b*Math.sin(3.1416*t/b.T+b.ph)**2):ln.speed},
   vxp(ln,v,t){const d=ln.dir;return(((v.p+d*s.dist(ln,t))%ln.len)+ln.len)%ln.len-MAXW},
@@ -380,7 +380,7 @@ ENG.match=function(L,seed){
    for(let k=0;k<n&&s.parts.length<260;k++){const a=rng()*6.28,v=60+rng()*140;s.parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-70,life:.5+rng()*.3,max:.8,col,sz:2+rng()*3,star:0})}},
   stars(x,y,n){if(RM)n=Math.min(n,2);for(let k=0;k<n&&s.parts.length<300;k++){const a=rng()*6.28,v=80+rng()*160;s.parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-90,life:.7+rng()*.4,max:1.1,col:k%2?'#ffc61a':'#fff',sz:4+rng()*3,star:1})}},
   say(txt,x,y,col,sz){s.txt.push({s:txt,x:clamp(x,70,GW-70),y,life:1.1,max:1.1,col:col||'#fff',sz:sz||22})},
-  commit(ctx,created){s.combo++;let pts=0;const via=[...ctx.via].filter(k=>at(k).t!==9).length;
+  commit(ctx,created){s.combo++;let pts=0;const via=[...(ctx.kind&&ctx.kind!=='match'?ctx.set:ctx.via)].filter(k=>at(k).t!==9).length;
    ctx.set.forEach(k=>{const r=(k/N)|0,c=k%N,t=s.g[r][c];if(t.t===9){s.coneLeft--;pts+=15}else if(t.t<=5){s.got[t.t]++;pts+=10}else pts+=20;if(t.sp)pts+=30;
     if(s.ice[r][c]>0){s.ice[r][c]--;pts+=15;if(!s.ice[r][c])s.iceLeft--;s.burst(r,c,'ice')}
     t.d=1;s.burst(r,c,t)});
@@ -618,14 +618,14 @@ const gLevelOpen=(id,L)=>L===1||(gStars(id)[L-2]||0)>0;
 const gTotal=id=>gStars(id).reduce((a,b)=>a+(b||0),0);
 function gamesTab(){
   const lock=!gUnlocked();
-  return `<h2>Games</h2><div class="card coinbar"><span>🪙 <b>${S.coins||0}</b> coins</span><span class="muted">Win levels to earn more</span></div>
-  ${lock?`<div class="card hl"><b>Games are locked</b><p class="muted" style="margin:4px 0 10px">Earn a star on any stop in Town to unlock all five games.</p><button class="btn small ghost" data-act="tab" data-v="road">Go to Town</button></div>`:''}
+  return `<h2>Games</h2><div class="card coinbar"><span>🪙 <b>${S.coins||0}</b> coins</span><span class="muted">Games and study runs earn coins</span></div>
+  ${lock?`<div class="card hl"><b>Five games are waiting</b><p class="muted" style="margin:4px 0 10px">Earn 1 star: 5 of 10 right on any stop in Town. Then all five games open.</p><button class="btn small ghost" data-act="tab" data-v="road">Go to Town</button></div>`:''}
   ${GAMES.map(g=>{const done=gStars(g.id).filter(Boolean).length;return `<button class="card gcard ${lock?'off':''}" data-act="${lock?'glocked':'gsheet'}" data-v="${g.id}"><span class="gic">${g.icon}</span><span class="ginfo"><b>${g.name}</b><span class="muted">${g.tag}</span><span class="gprog"><i style="width:${done*10}%"></i></span><small class="muted">${done} of 10 levels · ${gTotal(g.id)} of 30 stars</small></span><span class="gplay">${lock?'🔒':'Play'}</span></button>`}).join('')}`}
 function gsheetView(){const g=GAMES.find(x=>x.id===ui.gsheet),st=gStars(g.id);
   return `<div class="sheetbg" data-act="closesheet"><div class="sheet" role="dialog" aria-label="${g.name}" data-stop="1"><h2>${g.icon} ${g.name}</h2><p class="muted" style="margin:0 0 12px">${g.tag}. Pick a level.</p>
   <div class="lvgrid">${Array.from({length:10},(_,i)=>{const L=i+1,open=gLevelOpen(g.id,L),s=st[i]||0;return `<button class="lvb ${open?'':'off'} ${s?'done':''}" data-act="${open?'gplay':'glvlock'}" data-v="${g.id}:${L}"><b>${open?L:'🔒'}</b><span>${'★'.repeat(s)}${'☆'.repeat(3-s)}</span></button>`}).join('')}</div></div></div>`}
 acts.gsheet=v=>{ui.gsheet=v;render()};
-acts.glocked=()=>toast('Earn a star on any Town stop to unlock games.');
+acts.glocked=()=>toast('Earn 1 star: 5 of 10 right on any Town stop to open the games.');
 acts.glvlock=()=>toast('Beat the level before this one to unlock it.');
 acts.gplay=v=>{const[id,L]=v.split(':');ui.gsheet=null;render();GP.open(id,+L,false)};
 acts.bonus=()=>IX.launch();
@@ -642,13 +642,13 @@ const GP={el:null,eng:null,id:null,L:0,raf:0,last:0,run:false,paused:false,cv:nu
   GP.cv.style.width=GW*k+'px';GP.cv.style.height=GH*k+'px';GP.cv.width=Math.round(GW*k*dpr);GP.cv.height=Math.round(GH*k*dpr);GP.sc=GP.cv.width/GW;GP.cx.setTransform(GP.sc,0,0,GP.sc,0,0)},
  draw(){if(GP.eng){GP.cx.clearRect(0,0,GW,GH);GP.eng.draw(GP.cx)}},
  controls(){const box=GP.el.querySelector('#gctl'),cs=GP.eng.controls||[];box.style.display=cs.length?'flex':'none';
-  box.innerHTML=cs.map(c=>`<button class="gb" data-act2="${c[1]}" data-rep="${c[2]||0}" aria-label="${c[1]}">${c[0]}</button>`).join('');
+  box.innerHTML=cs.map(c=>{const lb=(HOW.LBL[GP.id]&&HOW.LBL[GP.id][c[1]])||c[1];return `<button class="gb" data-act2="${c[1]}" data-rep="${c[2]||0}" aria-label="${lb}" title="${lb}">${c[0]}</button>`}).join('');
   box.querySelectorAll('.gb').forEach(b=>{let iv=0;const fire=()=>{if(GP.run&&!GP.paused)GP.eng.act(b.dataset.act2)};
    b.addEventListener('pointerdown',e=>{e.preventDefault();fire();if(b.dataset.rep==='1'){clearInterval(iv);iv=setInterval(fire,110)}});
    ['pointerup','pointercancel','pointerleave'].forEach(t=>b.addEventListener(t,()=>clearInterval(iv)))})},
  hud(){const e=GP.eng;GP.el.querySelector('#gh').innerHTML=e.kind==='match'?'':Array.from({length:3},(_,i)=>`<span class="${i<e.hearts?'':'lost'}">♥</span>`).join('');
   GP.el.querySelector('#ghud').textContent=e.hud()},
- intro(g){const m=GP.el.querySelector('#gm');m.className='gmodal show';m.innerHTML=`<div class="gcardm"><div class="bigic">${g.icon}</div><h2>Level ${GP.L}</h2><p>${g.how(GP.L)}</p><button class="btn primary" data-g="start">Start</button></div>`},
+ intro(g){if(HOW.need(g.id)){HOW.show(g,()=>{if(GP.bonus&&GP.bgo)GP.bgo();else GP.intro(g)});return}const m=GP.el.querySelector('#gm');m.className='gmodal show';m.innerHTML=`<div class="gcardm"><div class="bigic">${g.icon}</div><h2>Level ${GP.L}</h2><p>${g.how(GP.L)}</p><button class="btn primary" data-g="start">Start</button></div>`},
  bind(){const el=GP.el,cv=GP.cv;
   const pt=(e,t)=>{if(!GP.run||GP.paused)return;const r=cv.getBoundingClientRect();GP.eng.pointer&&GP.eng.pointer(t,(e.clientX-r.left)/r.width*GW,(e.clientY-r.top)/r.height*GH)};
   cv.style.touchAction='none';
@@ -656,14 +656,18 @@ const GP={el:null,eng:null,id:null,L:0,raf:0,last:0,run:false,paused:false,cv:nu
   cv.addEventListener('pointermove',e=>{if(e.buttons||e.pointerType==='touch')pt(e,'move')});
   cv.addEventListener('pointerup',e=>pt(e,'up'));cv.addEventListener('pointercancel',e=>pt(e,'up'));
   el.addEventListener('click',e=>{const b=e.target.closest('[data-g]');if(!b)return;const a=b.dataset.g;
-   if(a==='start')GP.start();else if(a==='quit')GP.close();else if(a==='retry')GP.open(GP.id,GP.L);else if(a==='next')GP.open(GP.id,GP.L+1);else if(a==='list'){GP.close();ui.tab='games';ui.gsheet=GP.idPrev||null;render()}});
+   if(a==='start')GP.start();else if(a==='resume')GP.unpause();else if(a==='quit'){if(b.classList.contains('x')&&GP.run&&GP.eng&&GP.eng.status==='play'&&!GP.paused)GP.askQuit();else GP.close()}else if(a==='keep')GP.keepOn();else if(a==='leave')GP.close();else if(a==='htnext')HOW.next();else if(a==='htskip')HOW.finish();else if(a==='retry')GP.open(GP.id,GP.L);else if(a==='next')GP.open(GP.id,GP.L+1);else if(a==='easier')GP.open(GP.id,Math.max(1,GP.L-1));else if(a==='list'){GP.close();ui.tab='games';ui.gsheet=GP.idPrev||null;render()}});
   GP.onResize=()=>{GP.fit();GP.draw()};window.addEventListener('resize',GP.onResize);
-  GP.onVis=()=>{GP.paused=document.hidden;GP.last=0};document.addEventListener('visibilitychange',GP.onVis);
+  GP.onVis=()=>{if(document.hidden){if(GP.run&&GP.eng&&GP.eng.status==='play'&&!GP.paused)GP.pause()}GP.last=0};document.addEventListener('visibilitychange',GP.onVis);
   GP.onKey=e=>{if(!GP.run)return;const m={ArrowLeft:'left',ArrowRight:'right',ArrowUp:GP.id==='dash'?'up':'rotate',ArrowDown:'down',' ':GP.id==='flappy'?'tap':'drop'}[e.key];if(m){GP.eng.act(m);e.preventDefault()}};document.addEventListener('keydown',GP.onKey)},
+ pause(){GP.paused=true;if(!GP.el||GP.el.querySelector('.gpause'))return;const d=document.createElement('div');d.className='gpause';d.setAttribute('role','dialog');d.setAttribute('aria-label','Paused');d.innerHTML='<div class="gcardm"><div class="bigic">⏸️</div><h2>Paused</h2><p>Your game waited for you.</p><button class="btn primary" data-g="resume">Resume</button></div>';GP.el.appendChild(d)},
+ unpause(){const d=GP.el&&GP.el.querySelector('.gpause');if(d)d.remove();GP.paused=false;GP.last=0},
+ askQuit(){GP.paused=true;const m=GP.el.querySelector('#gm');m.className='gmodal show';m.innerHTML='<div class="gcardm" role="alertdialog" aria-label="Leave this round?"><h2>Leave this round?</h2><p>Your progress in this round will be lost.</p><button class="btn primary" data-g="keep">Keep playing</button><button class="btn line" data-g="leave" style="margin-top:10px">Leave</button></div>'},
+ keepOn(){GP.paused=false;GP.last=0;const m=GP.el&&GP.el.querySelector('#gm');if(m){m.className='gmodal';m.innerHTML=''}},
  start(){GP.el.querySelector('#gm').className='gmodal';GP.bt=0;GP.h0=null;GP.run=true;GP.last=0;cancelAnimationFrame(GP.raf);GP.raf=requestAnimationFrame(GP.loop)},
  loop(t){const e=GP.eng;if(!e)return;const dt=GP.last?(t-GP.last)/1000:0;GP.last=t;
   if(!GP.paused){e.update(Math.min(dt,.05));if(GP.bonus)GP.bonusTick(e,Math.min(dt,.05));GP.draw();const h=e.hearts+'|'+e.hud();if(h!==GP._h){GP._h=h;GP.hud()}}
-  if(e.status!=='play'){GP.run=false;setTimeout(()=>GP.end(),450);return}
+  if(e.status!=='play'){GP.run=false;setTimeout(()=>{if(GP.eng===e)GP.end()},450);return}
   GP.raf=requestAnimationFrame(GP.loop)},
  bonusTick(e,dt){GP.bt=(GP.bt||0)+dt;const cap=GP.cap||30,h=e.hud();if(GP.h0==null)GP.h0=h;
   const bar=GP.el&&GP.el.querySelector('.gtimer i');if(bar)bar.style.width=Math.min(100,GP.bt/cap*100)+'%';
@@ -671,9 +675,9 @@ const GP={el:null,eng:null,id:null,L:0,raf:0,last:0,run:false,paused:false,cv:nu
  end(){if(!GP.eng)return;const e=GP.eng,win=e.status==='win',g=GAMES.find(x=>x.id===GP.id);let stars=0,coins=0;
   if(win){stars=e.kind==='match'?(e.moves/e.mv0>=.35?3:e.moves/e.mv0>=.15?2:1):Math.max(1,e.hearts);coins=window.xGameCoins?window.xGameCoins(GP.L,stars):5+GP.L+stars*3;
    S.g=S.g||{};const a=S.g[GP.id]=S.g[GP.id]||Array(10).fill(0);a[GP.L-1]=Math.max(a[GP.L-1]||0,stars);S.coins=(S.coins||0)+coins;save()}
-  const m=GP.el.querySelector('#gm');m.className='gmodal show';
-  m.innerHTML=win?`<div class="gcardm">${fxStage(true)}<div class="stars3">${[1,2,3].map(i=>`<span class="${i<=stars?'on':''}">★</span>`).join('')}</div><h2>${fxGameWin(GP.L)}</h2><p class="gain"><span>🪙 +${coins}</span></p>${window.xGameNote||''}${GP.bonus?'<button class="btn primary" data-g="quit">Back to town</button><button class="btn line" data-g="retry" style="margin-top:10px">Play again</button>':`${GP.L<10?'<button class="btn primary" data-g="next">Next level</button>':''}<button class="btn ${GP.L<10?'ghost':'primary'}" data-g="retry" style="margin-top:10px">Play again</button><button class="btn line" data-g="quit" style="margin-top:10px">Back to games</button>`}</div>`
-   :`<div class="gcardm">${fxStage(false)}<h2>${e.kind==='match'?'Out of moves. Try a new plan.':fxGameLose()}</h2><p>${e.hud()}. Give it another try, it gets easier.</p><button class="btn primary" data-g="retry">Try again</button><button class="btn line" data-g="quit" style="margin-top:10px">${GP.bonus?'Back to town':'Back to games'}</button></div>`},
+  const m=GP.el.querySelector('#gm');m.className='gmodal show';{const hd=GP.el.querySelector('#ghud');if(hd)hd.style.visibility='hidden'}
+  m.innerHTML=win?`<div class="gcardm">${fxStage(true)}<div class="stars3">${[1,2,3].map(i=>`<span class="${i<=stars?'on':''}">★</span>`).join('')}</div><h2>${fxGameWin(GP.L,stars)}</h2><p class="gain"><span>🪙 +${coins}</span></p>${window.xGameNote||''}${GP.bonus?'<button class="btn primary" data-g="quit">Back to town</button><button class="btn line" data-g="retry" style="margin-top:10px">Play again</button>':`${GP.L<10?'<button class="btn primary" data-g="next">Next level</button>':''}<button class="btn ${GP.L<10?'ghost':'primary'}" data-g="retry" style="margin-top:10px">Play again</button><button class="btn line" data-g="quit" style="margin-top:10px">Back to games</button>`}</div>`
+   :`<div class="gcardm">${fxStage(false)}<h2>${e.kind==='match'?'Out of moves. Try a new plan.':fxGameLose()}</h2><p>${e.hud()}. Give it another try. You only need one clean run.</p><button class="btn primary" data-g="retry">Try again</button>${window.xToneEasier?xToneEasier(GP.id,GP.L):''}<button class="btn line" data-g="quit" style="margin-top:10px">${GP.bonus?'Back to town':'Back to games'}</button></div>`},
  close(silent){cancelAnimationFrame(GP.raf);GP.run=false;if(GP.el){GP.el.remove();GP.el=null}window.removeEventListener('resize',GP.onResize);document.removeEventListener('visibilitychange',GP.onVis);document.removeEventListener('keydown',GP.onKey);document.documentElement.classList.remove('ingame');GP.eng=null;if(!silent){ui.tab=GP.bonus?'road':'games';GP.bonus=false;render()}}};
 
 /* ---------- intermission: auto bonus round between levels ---------- */
@@ -682,16 +686,21 @@ const IX={timer:0,el:null,res:null,n:0,
   if(!x||!x.bonus||GP.el){if(IX.el||IX.timer)IX.cancel();return}
   if(S.autoGame===false||x.ixDone||x.mode!=='stop')return;
   if(IX.res===x&&(IX.timer||IX.el)){const sl=document.getElementById('ixslot');if(IX.el&&sl&&!IX.el.isConnected)sl.appendChild(IX.el);return}
-  IX.cancel();IX.res=x;IX.timer=setTimeout(IX.show,2400)},
- show(){IX.timer=0;const x=ui.result;if(!x||x!==IX.res||!x.bonus||GP.el)return;
+  IX.cancel();IX.res=x;IX.arm()},
+ /* the countdown starts only once the reward cards have been on screen 5 s (clock restarts while a modal is open), or 1.5 s after the player taps, drags or scrolls (taps on a modal and scripted scrolls do not count) */
+ arm(){const t0=Date.now(),mo=()=>!!(window.X&&X.modalOpen&&X.modalOpen());let t1=0,lm=0;const ev=['pointerdown','touchmove','wheel','keydown'],hit=()=>{const n=Date.now();if(mo()){lm=n;return}if(n-t0>1200&&n-lm>1500)t1=n};
+  ev.forEach(e=>window.addEventListener(e,hit,{capture:true,passive:true}));IX.unarm=()=>{ev.forEach(e=>window.removeEventListener(e,hit,{capture:true}));IX.unarm=null};
+  let t00=t0;IX.timer=setInterval(()=>{const n=Date.now();if(document.hidden||mo()){t00=n;t1=0;lm=n;return}
+   if(n-t00>=5000||(t1&&n-t1>=1500)){clearInterval(IX.timer);IX.timer=0;IX.show()}},250)},
+ show(){if(IX.unarm)IX.unarm();IX.timer=0;const x=ui.result;if(!x||x!==IX.res||!x.bonus||GP.el)return;
   const el=document.createElement('div');el.className='ixcd';el.setAttribute('role','status');el.setAttribute('aria-live','polite');
-  el.innerHTML=`<span class="ixn" id="ixn">3</span><span class="ixt"><b>Bonus round in <i id="ixs">3</i></b><small>${x.bonus.icon} ${esc(x.bonus.name)}. A quick one.</small></span><button class="ixskip" data-ix="skip" aria-label="Skip the bonus game">Skip</button>`;
-  el.addEventListener('click',e=>{if(e.target.closest('[data-ix=skip]')){e.stopPropagation();IX.skip()}});
+  el.innerHTML=`<span class="ixn" id="ixn">3</span><span class="ixt"><b>Bonus round in <i id="ixs">3</i></b><small>${x.bonus.icon} ${esc(x.bonus.name)}. A quick one.</small></span><span class="ixbt"><button class="ixskip" data-ix="skip" aria-label="Skip the bonus game">Skip</button><button class="ixlater" data-ix="later" aria-label="Not now, no bonus game this time">Not now</button></span>`;
+  el.addEventListener('click',e=>{if(e.target.closest('[data-ix=skip],[data-ix=later]')){e.stopPropagation();IX.skip()}});
   const slot=document.getElementById('ixslot');if(!slot)return;slot.appendChild(el);IX.el=el;IX.n=3;sfx&&sfx('tick');
   try{el.scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}catch(_){}
   IX.timer=setInterval(()=>{IX.n--;if(IX.n<=0){clearInterval(IX.timer);IX.timer=0;IX.launch();return}
    const a=document.getElementById('ixn'),b=document.getElementById('ixs');if(a)a.textContent=IX.n;if(b)b.textContent=IX.n;sfx('tick')},1000)},
- cancel(done){clearTimeout(IX.timer);clearInterval(IX.timer);IX.timer=0;if(IX.el){const sl=IX.el.parentNode;IX.el.remove();IX.el=null;if(done&&sl&&sl.id==='ixslot')sl.remove()}if(done&&IX.res)IX.res.ixDone=1;if(!done&&!ui.result)IX.res=null},
+ cancel(done){if(IX.unarm)IX.unarm();clearTimeout(IX.timer);clearInterval(IX.timer);IX.timer=0;if(IX.el){const sl=IX.el.parentNode;IX.el.remove();IX.el=null;if(done&&sl&&sl.id==='ixslot')sl.remove()}if(done&&IX.res)IX.res.ixDone=1;if(!done&&!ui.result)IX.res=null},
  skip(){IX.cancel(true)},
  launch(){const x=ui.result;if(!x||!x.bonus)return;const b=x.bonus;IX.cancel(true);
   if(S.gotCar&&!S.carSeen){/* first car card must be seen before any game starts */IX.def={b,x,drv:ui.drive};ui.drive=null;ui.result=null;ui.tab='road';render();return}
@@ -706,12 +715,14 @@ GP.open=function(){const r=_gOpen.apply(this,arguments);
   b.addEventListener('click',e=>{e.stopPropagation();IX.skipGame()});top.appendChild(b);
   const t=document.createElement('div');t.className='gtimer';t.setAttribute('aria-hidden','true');t.innerHTML='<i></i>';top.after(t);
   /* bonus rounds skip the intro modal: start now, show a one line goal hint for 2 s */
-  const g=GAMES.find(x=>x.id===GP.id),hint=document.createElement('div');hint.className='ghint';hint.setAttribute('role','status');
-  hint.textContent=g.tag;GP.el.appendChild(hint);
-  const hm=GP.el.querySelector('#gm');if(hm)hm.className='gmodal';GP.start();
-  setTimeout(()=>{hint.remove()},2000)}
+  const g=GAMES.find(x=>x.id===GP.id),el0=GP.el;
+  GP.bgo=()=>{if(GP.el!==el0)return;const hint=document.createElement('div');hint.className='ghint';hint.setAttribute('role','status');
+   hint.textContent=g.tag;GP.el.appendChild(hint);
+   const hm=GP.el.querySelector('#gm');if(hm){hm.className='gmodal';hm.innerHTML=''}GP.start();
+   setTimeout(()=>{hint.remove()},2000)};
+  if(!HOW.on)GP.bgo()}
  return r};
-GP.close=function(silent){if(!silent&&GP.bonus){if(GP.drv){ui.drive=GP.drv}GP.drv=null;GP.resSave=null}return _gClose.apply(this,arguments)};
+GP.close=function(silent){HOW.on=0;HOW.g=null;HOW.done=null;if(!silent&&GP.bonus){if(GP.drv){ui.drive=GP.drv}GP.drv=null;GP.resSave=null}return _gClose.apply(this,arguments)};
 const _rr=window.render;window.render=function(){const r=_rr.apply(this,arguments);try{IX.sync()}catch(e){}return r};
 acts.autogame=()=>{S.autoGame=S.autoGame===false;save();render()};
 acts.plan=v=>{S.studyPlan={when:v,ts:Date.now()};save();document.querySelectorAll('.ixplan [data-v]').forEach(b=>{const on=b.dataset.v===v;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)});
@@ -725,3 +736,27 @@ window.ixResult=(x,nx,good)=>{let h='';
   h+=`<div class="ixplan"><p>When will you study next? <small>(optional)</small></p><div class="ixchips">${[['tonight','Tonight'],['tomorrow','Tomorrow'],['weekend','This weekend']].map(c=>`<button class="chip2 ${w===c[0]?'on':''}" data-act="plan" data-v="${c[0]}" aria-pressed="${w===c[0]}">${c[1]}</button>`).join('')}</div><small id="ixpm" class="muted"></small></div>`}
  return h};
 window.ixSetting=()=>`<div class="card"><h3>Bonus games</h3><button class="ixtog" data-act="autogame" role="switch" aria-checked="${S.autoGame!==false}"><span>Bonus games between levels</span><i class="${S.autoGame!==false?'on':''}"></i></button><p class="muted" style="margin:8px 0 0">A short game pops up after you pass a stop. You can always skip it.</p></div>`;
+
+/* ---------- first-time how-to card: once per game, 2 steps (first bonus round or first play) ---------- */
+const HOW={on:0,step:0,g:null,done:null,
+ LBL:{stack:{left:'Move left',right:'Move right',rotate:'Turn the car',down:'Fall faster',drop:'Drop now'},dash:{left:'Step left',right:'Step right',up:'Step forward',down:'Step back'}},
+ box(){S.x=(S.x&&typeof S.x==='object')?S.x:{};S.x.howto=S.x.howto&&typeof S.x.howto==='object'?S.x.howto:{};return S.x.howto},
+ need(id){const h=HOW.box();return !(h.all||h[id])},
+ FIG:{
+  flappy:'<span class="hf hf-flappy" aria-hidden="true"><i class="hfa"></i><i class="hfb"></i><b>🚗</b><u>👆</u></span>',
+  dash:'<span class="hf hf-dash" aria-hidden="true"><b>🚸</b><i>⬆️</i><em>🚗</em></span>',
+  stack:'<span class="hf hf-stack" aria-hidden="true"><b>🚗</b><i></i><i></i></span>',
+  match:'<span class="hf hf-match" aria-hidden="true"><b>🛑</b><b>⚠️</b><b>🛑</b><b>🛑</b></span>',
+  bubble:'<span class="hf hf-bubble" aria-hidden="true"><b>🫧</b><i>🫧🫧🫧</i></span>'},
+ ONE:{flappy:'Tap anywhere to hop your car up through the gaps between barriers.',dash:'Swipe or tap an arrow to step one square, and cross the road without getting hit.',stack:'Cars fall from the top: slide and turn them so they fit together into full rows.',match:'Swap two neighbouring signs so that 3 or more of the same kind line up.',bubble:'Drag to aim, let go to shoot, and match 3 or more bubbles of the same colour.'},
+ two(g,L){const lv=LV;
+  if(g==='flappy')return `<p>Goal: pass ${lv.flappy.goal[L-1]} barriers. The top line counts them. A crash costs a heart and you have 3.</p>`;
+  if(g==='dash')return `<p>Goal: cross all ${lv.dash.lanes[L-1]+(L>=8?1:0)} lanes to the far side. The top line counts lanes crossed. A hit costs a heart and you have 3.</p>`;
+  if(g==='stack')return `<p>Goal: clear ${lv.stack.goal[L-1]} rows. The five buttons:</p><ul class="hflg"><li><b>◀ ▶</b> slide left or right</li><li><b>⟳</b> turn the car</li><li><b>▼</b> fall faster</li><li><b>⤓</b> drop it now</li></ul>`;
+  if(g==='match')return `<p>The goals sit at the top. They read like a score:</p><ul class="hflg"><li><b>Striped 0/3</b> make 3 striped pieces (match 4 in a row)</li><li><b>Bombs</b> match an L or T of 5</li><li><b>Ice</b> clear the sign on top of it</li><li><b>Blasted</b> signs cleared by special pieces</li></ul>`;
+  return `<p>Goal: pop every bubble. The top line counts the bubbles left. If rows get pushed down to the bottom line, you lose a heart. You have 3.</p>`},
+ show(g,done){HOW.on=1;HOW.g=g;HOW.done=done;HOW.step=0;HOW.draw()},
+ draw(){const g=HOW.g,m=GP.el&&GP.el.querySelector('#gm');if(!m)return;const first=HOW.step===0;
+  m.className='gmodal show';m.innerHTML=`<div class="gcardm ghow" role="dialog" aria-label="How to play ${g.name}"><p class="ghs">How to play, step ${HOW.step+1} of 2</p><h2>${g.icon} ${g.name}</h2>${first?`${HOW.FIG[g.id]}<p>${HOW.ONE[g.id]}</p>`:HOW.two(g.id,GP.L)}<button class="btn primary" data-g="htnext">${first?'Next':'Got it'}</button><button class="btn line" data-g="htskip" style="margin-top:10px">Skip</button></div>`},
+ next(){if(HOW.step===0){HOW.step=1;HOW.draw()}else HOW.finish()},
+ finish(){if(!HOW.g)return;HOW.box()[HOW.g.id]=1;save();const d=HOW.done;HOW.on=0;HOW.g=null;HOW.done=null;if(d)d()}};

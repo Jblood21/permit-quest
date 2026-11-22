@@ -26,7 +26,8 @@ let ui={ob:null,drive:null,gx:null,lesson:null,tab:'road',sheet:null,notes:null,
 /* ---------- helpers ---------- */
 const st=id=>S.q[id]||[0,0,0];
 const mastered=id=>st(id)[0]>=3;
-const isWeak=id=>{const a=st(id);return a[2]>0&&a[0]<=2};
+const CLEAR=2; /* a missed question leaves the weak list after this many right answers in a row */
+const isWeak=id=>{const a=st(id);return a[2]>0&&a[0]<CLEAR};
 const nMastered=()=>ALL.filter(q=>mastered(q.id)).length;
 const levelOf=xp=>{let i=0;LEVELS.forEach((v,k)=>{if(xp>=v)i=k});return i};
 const streakNow=()=>(S.last===today()||S.last===yest())?S.streak:(window.xShieldCover&&window.xShieldCover())||0;
@@ -61,9 +62,15 @@ const BADGES=[
 function startRun(o){
   const pool=o.pool;if(!pool.length){toast('Nothing to practice here yet.');return}
   const qs=o.qs||(o.mode==='exam'?shuffle(pool).slice(0,EXAM_N):pick(pool,o.n));
-  ui.run={missed:[],phase:null,mode:o.mode,title:o.title,chapter:o.chapter||null,queue:qs.map(q=>({q,retry:false})),i:0,first:{},picks:{},combo:0,best:0,xp:0,ok:0,locked:false,sel:null,opts:null};
+  ui.run={missed:[],phase:null,mode:o.mode,title:o.title,chapter:o.chapter||null,queue:qs.map(q=>({q,retry:false})),i:0,first:{},picks:{},combo:0,best:0,xp:0,ok:0,locked:false,sel:null,opts:null,weak0:o.mode==='review'?qs.filter(q=>isWeak(q.id)).map(q=>q.id):null};
   ui.sheet=null;ui.result=null;ui.notes=null;newItem();render();window.scrollTo(0,0)}
-const startQuiz=id=>{const c=CH.get(id);ui.lesson=null;startRun({mode:'stop',title:c.name,chapter:id,pool:ALL.filter(q=>q.ch===id),n:10})};
+const QUIZ_N=10,QUIZ_LESSON=7;
+/* a stop quiz takes at least 7 of its 10 questions from the facts the lesson just showed; the rest come from the whole chapter (weighted by priority) */
+function quizSet(id,seen){const pool=ALL.filter(q=>q.ch===id),n=Math.min(QUIZ_N,pool.length),inL=new Set((seen||[]).map(q=>q.id)),ls=pool.filter(q=>inL.has(q.id)),rest=pool.filter(q=>!inL.has(q.id));
+  const a=pick(ls,Math.min(ls.length,QUIZ_LESSON,n)),b=pick(rest,n-a.length),all=a.concat(b);
+  if(all.length<n)all.push(...pick(ls.filter(q=>!all.includes(q)),n-all.length));
+  return shuffle(all)}
+const startQuiz=id=>{const c=CH.get(id),L=ui.lesson,pg=L&&L.ch===id?(L.pg||lessonPages(id)):lessonPages(id);ui.lesson=null;startRun({mode:'stop',title:c.name,chapter:id,pool:ALL.filter(q=>q.ch===id),qs:quizSet(id,pg.flat())})};
 const startStop=id=>{ui.sheet=null;ui.result=null;ui.lesson={ch:id,i:0};render();window.scrollTo(0,0)};
 const PER=3,LESSON_N=12,lessonPages=id=>{const all=ALL.filter(q=>q.ch===id),top=new Set(all.map(q=>[priority(q),q]).sort((a,b)=>b[0]-a[0]).slice(0,LESSON_N).map(x=>x[1])),qs=all.filter(q=>top.has(q)),o=[];for(let i=0;i<qs.length;i+=PER)o.push(qs.slice(i,i+PER));return o};
 const startDaily=()=>{if(S.daily===today()){toast('Daily Drive is done. Come back tomorrow.');return}startRun({mode:'daily',title:'Daily Drive',pool:ALL,n:5})};
@@ -81,7 +88,7 @@ function answer(i){
   }else if(ok){r.xp+=2;r.last.gain=2}
   else if(r.mode==='stop'&&(item.tries||1)<3)r.queue.push({q,retry:true,tries:(item.tries||1)+1})
   S.combo=Math.max(S.combo,r.best);save();render()}
-function next(){const r=ui.run;r.i++;if(r.i>=r.queue.length){if(r.mode==='stop'&&r.missed.length){r.phase='review';render();window.scrollTo(0,0);return}finish();return}newItem();render();const b=$('.runbody');if(b)b.scrollTop=0}
+function next(){const r=ui.run;if(!r||!r.queue||!r.queue[r.i])return;r.i++;if(r.i>=r.queue.length){if(r.mode==='stop'&&r.missed.length){r.phase='review';render();window.scrollTo(0,0);return}finish();return}newItem();render();const b=$('.runbody');if(b)b.scrollTop=0}
 function finish(){
   const r=ui.run,lvBefore=levelOf(S.xp),ids=Object.keys(r.first);let correct,total,pass=null,xpGain,stg=0;
   if(isT(r.mode)){tick();r.queue.forEach(({q})=>{const ok=r.picks[q.id]===q.a;r.first[q.id]=ok;srs(q.id,ok)});
@@ -97,10 +104,11 @@ function finish(){
   const newB=BADGES.filter(b=>!S.badges[b.id]&&b.t());newB.forEach(b=>S.badges[b.id]=Date.now());
   if(r.mode==='stop'&&stg>=1){const nx=nextStop(),ni=nx?CHAPTERS.indexOf(nx):-1,at=S.at==null?0:S.at;if(ni>at)ui.drive={from:at,to:ni}}
   save();
-  const wrong=ids.filter(k=>!r.first[k]).map(k=>BYID.get(k));
+  const wrong=(isT(r.mode)?r.queue.map(x=>x.q.id):ids).filter(k=>!r.first[k]).map(k=>BYID.get(k));
   let bonus=null;if(r.mode==='stop'&&stg>=1){const i=CHAPTERS.findIndex(c=>c.id===r.chapter),g=GAMES[i%GAMES.length];bonus={id:g.id,name:g.name,icon:g.icon,L:Math.min(10,Math.max(1,Math.ceil((i+1)*10/CHAPTERS.length)))}}
-  ui.result={bonus,coins,mode:r.mode,title:r.title,chapter:r.chapter,correct,total,pass,xpGain,stars:stg,best:r.best,wrong,newB,lvUp:levelOf(S.xp)>lvBefore,lv:levelOf(S.xp)};
-  ui.run=null;render();window.scrollTo(0,0)}
+  let fix=null;if(r.weak0&&r.weak0.length){const cl=r.weak0.filter(id=>!isWeak(id)).length;fix={cleared:cl,total:r.weak0.length,left:r.weak0.length-cl,weakNow:ALL.filter(q=>isWeak(q.id)).length}}
+  ui.result={bonus,coins,mode:r.mode,title:r.title,chapter:r.chapter,correct,total,pass,xpGain,stars:stg,best:r.best,wrong,newB,lvUp:levelOf(S.xp)>lvBefore,lv:levelOf(S.xp),fix};
+  ui.resultAt=Date.now();ui.run=null;render();window.scrollTo(0,0)}
 
 /* ---------- views ---------- */
 function header(){const xp=S.xp,i=levelOf(xp),lo=LEVELS[i],hi=LEVELS[i+1]||lo,pct=hi>lo?(xp-lo)/(hi-lo):1,A=141.4;
@@ -117,7 +125,7 @@ function roadTab(){
   const ready=pct>=85&&last&&last.s/last.n>=PASS;
   const install=isIOS()&&!standalone()&&!S.hideInstall?`<div class="card hl"><b>Use it offline on your iPhone</b><p class="muted" style="margin:4px 0 10px">Open this page in Safari. Tap Share, then Add to Home Screen. After that it works with no internet.</p><button class="btn small ghost" data-act="hideinstall">Got it</button></div>`:'';
   const away=S.last&&S.runs?Math.round((new Date(today()+'T00:00')-new Date(S.last+'T00:00'))/864e5):0;
-  const back=away>=2&&S.remind!==false?`<div class="card hl"><b>Welcome back. You were away ${away} days.</b><p class="muted" style="margin:4px 0 10px">A 5 question Daily Drive keeps your streak going and your answers fresh.</p><div class="row" style="gap:8px"><button class="btn small ghost" data-act="daily" style="flex:2">Start Daily Drive</button><button class="btn small line" data-act="remindoff" style="flex:1">Turn off</button></div></div>`:'';
+  const back=away>=2&&S.remind!==false?`<div class="card hl">${window.xToneBack?window.xToneBack(away):'<b>Welcome back. Ready for a quick 5 question round?</b><p class="muted" style="margin:4px 0 10px">A 5 question Daily Drive is a quick way back in.</p>'}<div class="row" style="gap:8px"><button class="btn small ghost" data-act="daily" style="flex:2">Start Daily Drive</button><button class="btn small line" data-act="remindoff" style="flex:1">Turn off</button></div></div>`:'';
   return `${install}${back}<div class="card cta">${nx?`<div class="kicker">${first?'Start here':'Up next'}</div><h3>${first?'Your first drive: ':''}${nx.icon} ${esc(nx.name)}</h3><button class="btn primary" data-act="stop" data-v="${nx.id}">${first?'Start driving':'Continue'}</button>`:`<div class="kicker">Road complete</div><h3>All stops at 3 stars</h3><button class="btn primary" data-act="exam">Take the mock exam</button>`}</div>
   <button class="card daily btn line" style="width:100%;margin:10px 0" data-act="daily"><span class="ic">${dd?'✅':'☀️'}</span><span><b>Daily Drive</b><span class="muted">${dd?'Done today. Back tomorrow.':'5 quick questions · +30 bonus XP'}</span></span></button>
   <div class="card"><div class="ready"><b>Permit readiness</b><strong>${pct}%</strong></div><div class="track"><b style="width:${pct}%"></b></div><div class="muted">${ready?'You are ready to take the real test. Good luck.':m+' of '+ALL.length+' questions mastered. Reach 85% and pass a mock exam to be ready.'}</div></div>
@@ -126,12 +134,12 @@ function roadTab(){
 function examTab(){const h=S.exams.slice(0,5);
   return `<h2>Mock exam</h2><div class="card hero"><p style="margin:0 0 10px">${EXAM_N} mixed questions. No answers shown until the end. You need ${Math.round(PASS*100)}% to pass, the same pass mark as the real written test.</p><p class="muted" style="margin:0 0 14px">The real test's question count is set by the Driver License Division. This is practice for the format.</p><button class="btn primary" data-act="exam">Start mock exam</button></div>
   <div class="card"><h3>Recent results</h3>${h.length?h.map(e=>{const p=Math.round(e.s/e.n*100),ok=e.s/e.n>=PASS;return `<div class="erow"><span class="muted">${new Date(e.t).toLocaleDateString(undefined,{month:'short',day:'numeric'})}</span><b>${e.s}/${e.n}</b><span class="pill ${ok?'ok':'bad'}">${p}% ${ok?'Pass':'Retry'}</span></div>`}).join(''):'<div class="empty"><span class="ei" aria-hidden="true">🏁</span><b>No exams yet</b><span class="muted">Take one after a few stops.</span></div>'}</div>`}
-function reviewTab(){const w=ALL.filter(q=>isWeak(q.id));
-  return `<h2>Fix my mistakes</h2><div class="card"><div class="ready"><b>Weak spots</b><strong>${w.length}</strong></div><p class="muted" style="margin:6px 0 14px">${w.length?'Questions you missed stay here until you get them right again. Short, focused rounds.':'Nothing to fix right now. Practice a few stops and anything you miss will show up here.'}</p><button class="btn ${w.length?'primary':'ghost'}" data-act="review">${w.length?'Practice weak spots':'Practice a mixed set'}</button></div>
+function reviewTab(){const w=ALL.filter(q=>isWeak(q.id)),ever=ALL.filter(q=>st(q.id)[2]>0).length,done=ever-w.length;
+  return `<h2>Fix my mistakes</h2><div class="card"><div class="ready"><b>Weak spots</b><strong>${w.length}</strong></div>${ever?`<div class="track" style="margin-top:8px"><b style="width:${Math.round(done/ever*100)}%"></b></div><div class="muted" style="margin-top:4px"><b>${done} of ${ever}</b> cleared so far</div>`:''}<p class="muted" style="margin:6px 0 14px">${w.length?'A missed question leaves this list after you get it right '+CLEAR+' times in a row. Miss it again and the count starts over. Short, focused rounds.':'Nothing to fix right now. Practice a few stops and anything you miss will show up here.'}</p><button class="btn ${w.length?'primary':'ghost'}" data-act="review">${w.length?'Practice weak spots':'Practice a mixed set'}</button></div>
   ${w.length?`<div class="card"><h3>Topics with weak spots</h3>${CHAPTERS.map(c=>[c,w.filter(q=>q.ch===c.id).length]).filter(x=>x[1]).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--edge)"><span style="flex:3">${c.icon} ${esc(c.name)}</span><b style="flex:1;text-align:right">${n}</b></div>`).join('')}</div>`:''}`}
 function meTab(){const m=nMastered(),i=levelOf(S.xp);
   const code=()=>btoa(unescape(encodeURIComponent(JSON.stringify(S))));
-  return `<h2>Me</h2><div class="card mehero"><div class="meav" aria-hidden="true">${esc(((S.avatar&&S.avatar.name)||'D').trim().charAt(0).toUpperCase())}</div><div><b class="mename">${esc((S.avatar&&S.avatar.name)||'Driver')}</b><span class="muted">Level ${i+1} · ${RANKS[i]}</span></div></div><div class="card"><div class="stat3" style="margin-top:0"><div><b>${S.xp}</b><small>XP</small></div><div><b>${streakNow()}</b><small>Day streak</small></div><div><b>${S.best}</b><small>Best streak</small></div><div><b>${m}</b><small>Mastered</small></div><div><b>${totalStars()}</b><small>Stars</small></div><div><b>${S.runs}</b><small>Runs</small></div></div></div>
+  return `<h2>Me</h2><div class="card mehero"><div class="meav" aria-hidden="true">${S.avatar&&typeof avatarSVG==='function'?avatarSVG(S.avatar,'16 2 88 106','meavsvg'):esc(((S.avatar&&S.avatar.name)||'D').trim().charAt(0).toUpperCase())}</div><div><b class="mename">${esc((S.avatar&&S.avatar.name)||'Driver')}</b><span class="muted">Level ${i+1} · ${RANKS[i]}</span></div></div><div class="card"><div class="stat3" style="margin-top:0"><div><b>${S.xp}</b><small>XP</small></div><div><b>${streakNow()}</b><small>Day streak</small></div><div><b>${S.best}</b><small>Best streak</small></div><div><b>${m}</b><small>Mastered</small></div><div><b>${totalStars()}</b><small>Stars</small></div><div><b>${S.runs}</b><small>Runs</small></div></div></div>
   <div class="card"><h3>Badges</h3>${BADGES.map(b=>`<div class="badge ${S.badges[b.id]?'':'off'}"><span class="e">${b.e}</span><span><b>${b.n}</b><span class="muted">${b.d}</span></span></div>`).join('')}</div>
   ${typeof ixSetting==='function'?ixSetting():''}${typeof remindCard==='function'?remindCard():''}<div class="card"><h3>Offline</h3><p class="muted" style="margin:0">${ui.offline?'✅ Offline ready. You can use Permit Quest with no internet.':location.protocol==='file:'?'Open the hosted web address to turn on offline mode.':'Getting ready for offline use. Keep this page open a moment.'}</p></div>
   <div class="card"><h3>Back up your progress</h3><p class="muted" style="margin:0 0 10px">Your progress is saved on this phone. A backup code lets you move it to a new phone or restore it.</p><textarea class="code" id="code" aria-label="Backup code" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea><div class="row" style="margin-top:10px"><button class="btn small ghost" data-act="copy">Copy code</button><button class="btn small ghost" data-act="restore">Restore from code</button></div><p class="muted" style="margin:10px 0 0">To restore, paste a code into the box above, then tap Restore.</p></div>
@@ -149,22 +157,27 @@ function runView(){const r=ui.run;if(r.phase==='review')return reviewPhase();con
     return `<button class="opt ${cls}" data-act="ans" data-v="${i}" ${r.locked?'aria-disabled="true"':''}><span class="k">${'ABCD'[i]}</span><span>${esc(o)}</span></button>`}).join('');
   let foot='';
   if(ex){const last=r.i===r.queue.length-1;foot=`<div class="foot"><button class="btn primary" data-act="next" ${r.sel===null?'disabled style="opacity:.4"':''}>${last?(r.mode==='pre'?'Finish pretest':'Finish exam'):'Next'}</button></div>`}
-  else if(r.locked){const ok=r.last.ok;foot=`<div class="fb ${ok?'ok':'bad'}" aria-live="polite"><h3><span>${fxWord(ok,r.i)}</span><span class="xp">+${r.last.gain} XP</span></h3><p>${ok?'':'The answer is: <b>'+esc(q.a)+'</b>. '}${esc(q.why)}</p><button class="btn primary" data-act="next">${r.i===r.queue.length-1?'See results':'Continue'}</button></div>`}
+  else if(r.locked){const ok=r.last.ok;foot=`<div class="fb ${ok?'ok':'bad'}" aria-live="polite"><h3><span>${fxWord(ok,r.i)}</span><span class="xp">+${r.last.gain} XP</span></h3><p>${ok?'':'The answer is: <b>'+esc(q.a)+'</b>. '}${esc(q.why)}</p>${r.mode==='review'&&!item.retry?`<p class="muted flow-clr">${isWeak(q.id)?(ok?(CLEAR-st(q.id)[0])+' more right in a row clears this one.':'Back to the start for this one. It stays on your list.'):'Cleared from your weak spots.'}</p>`:''}<button class="btn primary" data-act="next">${r.i===r.queue.length-1?'See results':'Continue'}</button></div>`}
   return `<div class="run"><div class="runtop"><button class="x" data-act="quit" aria-label="Quit">✕</button><div class="prog"><b style="width:${pct}%${r.locked&&!ex?';--from:'+Math.round(r.i/r.queue.length*100)+'%':''}" ${r.locked&&!ex?'class="fill"':''}></b></div><div class="combo ${r.combo>=3?'hot':''} ${r.locked&&r.last&&r.last.ok?'bump':''}">${ex?(r.i+1)+'/'+r.queue.length:'🔥 '+r.combo}</div></div>
   <div class="runbody ${r.locked||r.sel!=null?'':'in'}"><div class="qtag">${esc(ex?(r.mode==='pre'?'Pretest':'Mock exam'):CH.get(q.ch).name)}${item.retry?'<span class="retry">Try again</span>':''}</div>${visHTML(q)}<div class="q">${esc(q.q)}</div>${opts}</div>${foot}</div>`}
 function lessonView(){const L=ui.lesson,c=CH.get(L.ch),pg=L.pg||(L.pg=lessonPages(L.ch)),n=pg.length,last=L.i>=n-1;
   const facts=pg[L.i].map(q=>`<div class="note">${visHTML(q)}<small>${esc(q.q)}</small><b>${esc(q.a)}</b><span class="muted">${esc(q.why)}</span></div>`).join('');
   return `<div class="run"><div class="runtop"><button class="x" data-act="lessonquit" aria-label="Close lesson">✕</button><div class="prog"><b style="width:${Math.round((L.i+1)/n*100)}%"></b></div><div class="combo">${L.i+1}/${n}</div></div><div class="runbody"><div class="qtag">Learn: ${c.icon} ${esc(c.name)}</div><div class="card pg" style="margin-top:10px">${facts}</div></div><div class="foot"><button class="btn primary" data-act="${last?'quizgo':'lessonnext'}">${last?'Start the quiz':'Next'}</button><div class="row" style="justify-content:space-between;margin-top:8px">${L.i>0?'<button class="btn small line" data-act="lessonback">Back</button>':'<span></span>'}${last?'':'<button class="btn small line" data-act="quizgo">Skip to quiz</button>'}</div></div></div>`}
+/* missed questions on a result (exam, pretest, daily, review): the right answer and why-line, plus a way to practice exactly these */
+function missCard(x){if(!x.wrong||!x.wrong.length||x.mode==='stop')return '';const n=x.wrong.length;
+  return `<div class="card flow-miss"><h3>${n} to review</h3>${x.wrong.map(q=>`<div class="wrong">${visHTML(q)}<b>${esc(q.q)}</b><br><span>${esc(q.a)}</span><br><small>${esc(q.why)}</small></div>`).join('')}<button class="btn ghost" data-act="pracwrong" style="margin-top:12px">Practice these ${Math.min(n,15)}</button></div>`}
+function fixCard(x){const f=x.fix;if(!f)return '';
+  return `<div class="card flow-fix"><b>${f.cleared} of ${f.total} cleared</b><p class="muted" style="margin:4px 0 0">${f.cleared>=f.total?'Every question in this round is off your list.':f.left+' still need '+(CLEAR===1?'one right answer':CLEAR+' right answers in a row')+'. A question leaves your list after '+CLEAR+' right answers in a row, so one good round is a start, not the end.'} ${f.weakNow} left on your list in all.</p></div>`}
 function resultView(){if(ui.result.mode==='pre'&&typeof preResult==='function')return preResult(ui.result);const x=ui.result,pct=Math.round(x.correct/x.total*100),ex=x.mode==='exam',nx=nextStop(),good=ex?x.pass:(x.mode==='stop'?x.stars>=1:pct>=70),scn=typeof fxStage==='function'?fxStage(good,x):'';
-  const head=ex?`<div class="big pop" style="color:${x.pass?'var(--green)':'var(--red)'}">${pct}%</div><h2 style="margin-top:10px">${x.pass?'You passed!':'Not yet. Check the misses and run it again.'}</h2><p class="muted">${x.correct} of ${x.total} correct. You need ${Math.round(PASS*100)}% to pass.</p>`
-    :`<div class="star3">${x.mode==='stop'?[1,2,3].map(i=>`<span class="${i<=x.stars?'on':''}">★</span>`).join(''):(pct>=90?'🏆':pct>=60?'👍':'💪')}</div><div class="big" style="margin-top:8px">${pct}%</div><h2 style="margin-top:10px">${fxHead(pct)}</h2><p class="muted">${x.correct} of ${x.total} right on the first try.</p>`;
+  const head=ex?`<div class="big pop" style="color:${x.pass?'var(--green)':'inherit'}">${pct}%</div><h2 style="margin-top:10px">${x.pass?'You passed!':'Not there yet. Practice weak spots is your next step.'}</h2><p class="muted">${x.correct} of ${x.total} correct. You need ${Math.round(PASS*100)}% to pass.</p>`
+    :`<div class="star3">${x.mode==='stop'?[1,2,3].map(i=>`<span class="${i<=x.stars?'on':''}">★</span>`).join(''):(typeof fxIcon==='function'?fxIcon(pct):pct>=90?'🏆':pct>=60?'👍':'💪')}</div><div class="big" style="margin-top:8px">${pct}%</div><h2 style="margin-top:10px">${fxHead(pct)}</h2><p class="muted">${x.correct} of ${x.total} right on the first try.</p>`;
   const chips=`<div class="gain"><span>+${x.xpGain} XP</span><span>🪙 ${x.coins}</span>${x.best>=3?`<span>⚡ Best combo ${x.best}</span>`:''}${x.lvUp?`<span>🎉 Level ${x.lv+1}: ${RANKS[x.lv]}</span>`:''}</div>`;
   const nb=x.newB.length?`<div class="card hl center"><b>New badge${x.newB.length>1?'s':''}</b>${x.newB.map(b=>`<div style="margin-top:6px"><span style="font-size:26px">${b.e}</span> <b>${b.n}</b></div>`).join('')}</div>`:'';
-  const wr=x.wrong.length&&x.mode!=='stop'?`<div class="card"><h3>${x.wrong.length} to review</h3>${x.wrong.map(q=>`<div class="wrong"><b>${esc(q.q)}</b><br><span>${esc(q.a)}</span><br><small>${esc(q.why)}</small></div>`).join('')}</div>`:'';
+  const wr=missCard(x),fxc=fixCard(x);
   const auto=S.autoGame!==false,primary=x.bonus&&!auto?`<button class="btn primary" data-act="bonus">${x.bonus.icon} Play bonus game: ${esc(x.bonus.name)}</button>`:ex&&!x.pass?`<button class="btn primary" data-act="review">Practice weak spots</button>`:(!ex&&nx&&x.mode!=='review'&&x.mode!=='daily'?`<button class="btn primary" data-act="stop" data-v="${nx.id}">${x.mode==='stop'&&!good?'Try again':'Keep going'}: ${esc(nx.name)}</button>`:`<button class="btn primary" data-act="home">Back to town</button>`);
   const nxBtn=x.bonus&&auto?`<button class="btn line" data-act="bonus" style="margin-top:10px">${x.bonus.icon} Play bonus now: ${esc(x.bonus.name)}</button>`:x.bonus&&nx?`<button class="btn line" data-act="stop" data-v="${nx.id}" style="margin-top:10px">Next level: ${esc(nx.name)}</button>`:'';
   const sec=primary.includes('data-act="home"')?'':nxBtn+`<button class="btn line" data-act="home" style="margin-top:10px">Back to town</button>`;
-  return `<div class="res"><div class="center resh"><p class="eyebrow">${esc(x.title)}</p>${scn}${head}${chips}</div>${typeof ixResult==='function'?ixResult(x,nx,good):''}${nb}${wr}<div class="resfoot">${primary}${sec}</div></div>`}
+  return `<div class="res"><div class="center resh"><p class="eyebrow">${esc(x.title)}</p>${scn}${head}${chips}</div>${typeof ixResult==='function'?ixResult(x,nx,good):''}${nb}${fxc}${wr}<div class="resfoot">${primary}${sec}</div></div>`}
 function notesView(){const c=CH.get(ui.notes);
   return `<div class="top"><div class="toprow"><button class="x" data-act="closenotes" aria-label="Back" style="color:#fff">←</button><b style="flex:1">${c.icon} ${esc(c.name)}</b></div></div><main><p class="muted" style="margin-top:0">Key facts for this stop. Read them, then start a run.</p><div class="card">${c.qs.map(q=>`<div class="note">${visHTML(q)}<small>${esc(q.q)}</small><b>${esc(q.a)}</b><span class="muted">${esc(q.why)}</span></div>`).join('')}</div><button class="btn primary" data-act="stop" data-v="${c.id}">Start ${Math.min(10,c.qs.length)} questions</button><p class="muted center">${esc(c.src)}</p></main>`}
 function render(){const a=$('#app');a.innerHTML=ui.run?runView():ui.ob&&typeof obView==='function'?obView():ui.lesson?lessonView():ui.result?resultView():ui.notes?notesView():shell();
@@ -175,12 +188,12 @@ const acts={
   tab:v=>{ui.tab=v;ui.sheet=null;ui.gsheet=null;render();window.scrollTo(0,0)},
   stop:v=>startStop(v),daily:()=>startDaily(),exam:()=>startExam(),review:()=>startReview(),
   sheet:v=>{ui.sheet=v;render()},closesheet:()=>{ui.sheet=null;ui.gsheet=null;render()},
-  locked:v=>{const i=CHAPTERS.findIndex(c=>c.id===v);toast('Earn a star on '+CHAPTERS[i-1].name+' to unlock this stop.')},
+  locked:v=>{const i=CHAPTERS.findIndex(c=>c.id===v);toast('Earn 1 star on '+CHAPTERS[i-1].name+' to unlock this stop. That is 5 of 10 right.')},
   notes:v=>{ui.notes=v;ui.sheet=null;render();window.scrollTo(0,0)},closenotes:()=>{ui.notes=null;render()},
   ans:v=>answer(+v),next:()=>next(),
-  lessonnext:()=>{ui.lesson.i++;render();window.scrollTo(0,0)},lessonback:()=>{ui.lesson.i=Math.max(0,ui.lesson.i-1);render();window.scrollTo(0,0)},lessonquit:()=>{ui.lesson=null;render()},quizgo:()=>startQuiz(ui.lesson.ch),
-  retrygo:()=>{const r=ui.run;r.queue.push(...r.missed.map(q=>({q,retry:true,tries:1})));r.missed=[];r.phase=null;newItem();render();window.scrollTo(0,0)},
-  quit:()=>{const r=ui.run;if(r.i>0&&!confirm('Leave this run? Your answers so far are saved, but you will not get stars or the finish bonus.'))return;ui.run=null;render()},
+  lessonnext:()=>{const L=ui.lesson;if(!L)return;const n=(L.pg||(L.pg=lessonPages(L.ch))).length;if(L.i>=n-1){if(L.i>n-1){L.i=n-1;render()}return}L.i++;render();window.scrollTo(0,0)},lessonback:()=>{if(!ui.lesson)return;ui.lesson.i=Math.max(0,ui.lesson.i-1);render();window.scrollTo(0,0)},lessonquit:()=>{ui.lesson=null;render()},quizgo:()=>{if(ui.lesson)startQuiz(ui.lesson.ch)},pracwrong:()=>{const x=ui.result;if(!x||!x.wrong||!x.wrong.length)return;ui.result=null;startRun({mode:'review',title:'Practice your misses',pool:x.wrong,qs:pick(x.wrong,15)})},
+  retrygo:()=>{const r=ui.run;if(!r||!r.missed)return;r.queue.push(...r.missed.map(q=>({q,retry:true,tries:1})));r.missed=[];r.phase=null;newItem();render();window.scrollTo(0,0)},
+  quit:()=>{const r=ui.run;if(!r)return;if(r.i>0&&!confirm('Leave this run? Your answers so far are saved, but you will not get stars or the finish bonus.'))return;ui.run=null;render()},
   home:()=>{ui.result=null;ui.tab='road';render();window.scrollTo(0,0)},
   hideinstall:()=>{S.hideInstall=true;save();render()},
   copy:async()=>{const t=$('#code'),mine=$('#codeval').textContent;t.value=mine;t.select();try{await navigator.clipboard.writeText(mine);toast('Backup code copied')}catch(e){try{document.execCommand('copy');toast('Backup code copied')}catch(_){toast('Press and hold the code to copy it')}}},

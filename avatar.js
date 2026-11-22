@@ -278,7 +278,7 @@ function tile(c,it,av){
 function garageView(onb){
  ui.gx=ui.gx||{c:'hairStyle',t:{}};if(!catOf(ui.gx.c))ui.gx.c='hairStyle';
  const av=tryAv(),c=catOf(ui.gx.c),grp=isChar(c.key)?'char':'car',cost=priceOf(av),dirty=Object.keys(ui.gx.t).length>0,coins=S.coins||0;
- const bar=dirty?`<div class="gbar"><div class="muted">${cost?`Costs 🪙 ${cost}${cost>coins?`. You need ${cost-coins} more. Win games to earn them.`:''}`:'Your items'}</div><div class="row" style="gap:8px"><button class="btn small line" data-act="gundo" style="flex:1">Undo</button><button class="btn small primary" data-act="gsave" style="flex:2" ${cost>coins?'disabled style="opacity:.45"':''}>${cost?'Buy and wear':'Wear it'}</button></div></div>`:'';
+ const bar=dirty?`<div class="gbar"><div class="muted">${cost?`Costs 🪙 ${cost}${cost>coins?`. You need ${cost-coins} more. Study runs and games both earn coins.`:''}`:'Your items'}</div><div class="row" style="gap:8px"><button class="btn small line" data-act="gundo" style="flex:1">Undo</button><button class="btn small primary" data-act="gsave" style="flex:2" ${cost>coins?'disabled style="opacity:.45"':''}>${cost?'Buy and wear':'Wear it'}</button></div></div>`:'';
  return `${onb?'':'<h2>Garage</h2>'}<div class="gseg" role="tablist" aria-label="What to change"><button role="tab" aria-selected="${grp==='char'}" class="${grp==='char'?'on':''}" data-act="ggrp" data-v="char">Look</button><button role="tab" aria-selected="${grp==='car'}" class="${grp==='car'?'on':''}" data-act="ggrp" data-v="car">Car</button>${grp==='char'?'<button class="gsur" data-act="gsurprise">Surprise me</button>':'<span class="gfree muted">Coins buy cars</span>'}</div><div class="gstick"><div class="gprev"><div class="gp1">${avatarSVG(av,FULLVB,'avbig')}</div><div class="gp2">${carSVG(av,'carbig')}<span class="gname">${esc(S.avatar&&S.avatar.name||'')}</span></div></div>
  <div class="gchips" role="tablist">${GRP(grp).map(x=>`<button role="tab" aria-selected="${x.key===c.key}" class="gc ${x.key===c.key?'on':''}" data-act="gcat" data-v="${x.key}">${x.label}</button>`).join('')}</div></div>
  <div class="ggrid ${c.kind==='swatch'?'sw':''} ${c.kind==='body'?'bd':''}">${c.items.map(it=>tile(c,it,av)).join('')}</div>${bar}`}
@@ -291,7 +291,7 @@ Object.assign(acts,{
   Object.assign(S.avatar,cur,{hairStyle:pickOf(catOf('hairStyle').items.map(i=>i.id)),hairColor:pickOf(Object.keys(HAIRC)),outfit:fit,hat:outfitHat(cur,fit),top:pickOf(Object.keys(TOPC))});
   syncPlayer();save();render()},
  gundo:()=>{ui.gx.t={};render()},
- gsave:()=>{const av=tryAv(),cost=priceOf(av);if(cost>(S.coins||0)){toast('Not enough coins yet. Win games to earn more.');return}
+ gsave:()=>{const av=tryAv(),cost=priceOf(av);if(cost>(S.coins||0)){toast('Not enough coins yet. Study runs and games both earn coins.');return}
   S.coins-=cost;S.own=S.own||{};CATS.forEach(c=>{if(isChar(c.key))return;(c.multi?av[c.key]:[av[c.key]]).forEach(id=>{S.own[c.key+':'+id]=1})});
   S.avatar=Object.assign({},S.avatar,av,{name:S.avatar.name});ui.gx.t={};syncPlayer();save();toast(cost?'Bought. Looking good.':'Saved');render()}
 });
@@ -325,7 +325,7 @@ function startPretest(){
  const per=CHAPTERS.map(c=>shuffle(ALL.filter(q=>q.ch===c.id))[0]),used=new Set(per.map(q=>q.id)),extra=shuffle(ALL.filter(q=>!used.has(q.id))).slice(0,4);
  startRun({mode:'pre',title:'Pretest',pool:ALL,qs:shuffle(per.concat(extra))})}
 function preResult(x){const pct=Math.round(x.correct/x.total*100),by=CHAPTERS.map(c=>({c,v:(S.pre&&S.pre.by&&S.pre.by[c.id])||[0,0]})).filter(r=>r.v[1]>0).sort((a,b)=>a.v[0]/a.v[1]-b.v[0]/b.v[1]);
- return `<div style="max-width:560px;margin:0 auto;padding:calc(28px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom))"><div class="center"><p class="eyebrow">Your starting point</p><div class="big pop">${pct}%</div><h2 style="margin-top:10px">${pct>=80?'You already know a lot':pct>=50?'A solid start':'A fresh start. Let us build it up.'}</h2><p class="muted">${x.correct} of ${x.total} right. The real test needs 80%.</p><div class="gain"><span>+${x.xpGain} XP</span><span>🪙 ${x.coins}</span></div></div>
+ return `<div style="max-width:560px;margin:0 auto;padding:calc(28px + env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom))"><div class="center"><p class="eyebrow">Your starting point</p><div class="big pop">${pct}%</div><h2 style="margin-top:10px">${pct>=80?'You already know a lot':pct>=50?'A solid start':'A fresh start. Let us build it up.'}</h2><p class="muted">${x.correct} of ${x.total} right. Here is where to start.</p><div class="gain"><span>+${x.xpGain} XP</span><span>🪙 ${x.coins}</span></div></div>
  <div style="margin:14px 0"><button class="btn primary" data-act="stop" data-v="${CHAPTERS[0].id}">Start learning</button><button class="btn line" data-act="home" style="margin-top:10px">Back to town</button></div>
  <div class="card"><h3>Where to focus</h3>${by.map(r=>{const p=Math.round(r.v[0]/r.v[1]*100);return `<div class="prerow"><span>${r.c.icon} ${esc(r.c.name)}</span><span class="track"><b style="width:${p}%"></b></span><small>${r.v[0]}/${r.v[1]}</small></div>`}).join('')}</div></div>`}
 const pretestCard=()=>{const p=S.pre&&S.pre.n?S.pre:null;
