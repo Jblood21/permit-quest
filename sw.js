@@ -1,4 +1,4 @@
-const V='pq-08155c9f';
+const V='pq-0a38c6f5';
 const ASSETS=['./','index.html','style.css','app.js','avatar.js','fx.js','questions.js','signs.js','games.js','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(V).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith('pq-')&&k!==V).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
